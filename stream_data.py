@@ -5,7 +5,7 @@ import json
 # Connect to the vehicle
 baud = 57600
 mav = mavutil.mavlink_connection(
-    "/dev/cu.usbserial-D30BQ4ZZ",
+    "/dev/cu.usbserial-D30F0LHK",
     baud=baud,
 )  # Adjust the connection string as needed
 print(f"baud is {baud}")
@@ -33,5 +33,8 @@ with open(f"data_{dt_string}.json", "w") as f:
 #   ls /dev/*usb*
 # possbile connection strign prefixes: cu., tty.
 
-# on Brady's mac:
+# on mac for Atlas radio:
 # /dev/cu.usbserial-D30BQ4ZZ
+
+# on mac for Atlas 2 radio:
+# /dev/cu.usbserial-D30F0LHK
