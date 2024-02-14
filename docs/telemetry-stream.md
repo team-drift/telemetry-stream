@@ -9,8 +9,16 @@ This folder contains a C++ implementation for streaming telemetry data. We prima
 ## Developer Notes
 Read the following documentation before developing: [Telemetry](https://mavsdk.mavlink.io/main/en/cpp/guide/telemetry.html). 
 
+To begin developing:
+
+0. Ensure you have CMake and compiler such as GCC, Clang, or MSVC setup. 
+
+1. [Install MAVSDK C++](https://mavsdk.mavlink.io/main/en/cpp/guide/installation.html) for your machine's OS. We made need to explore [building from source](https://mavsdk.mavlink.io/main/en/cpp/guide/build.html) given a recent issue.
+
+Once all is complete, you should be set to start developing! [Examples](https://mavsdk.mavlink.io/main/en/cpp/examples/) may be a helpful resource to look at before developing.
+
 # python
-The `python` folder is simply a deprecated `python` implementation. Though still functional, we opted to refactor in C++ as performance must be optimized.
+The `python` folder is simply a deprecated `python` implementation which uses [`pymavlink`](https://github.com/ArduPilot/pymavlink). Though still functional, we opted to refactor in C++ as performance must be optimized.
 
 # How to use
-This section (will soon) outlines how to setup telemetry streaming. 
+This section (will soon) outlines how to physically setup telemetry streaming from the drone to the ground station (us). 
