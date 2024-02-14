@@ -17,5 +17,4 @@ add_executable(telemetry-stream main.cpp)
 # Link MAVSDK library
 target_link_libraries(telemetry-stream
   MAVSDK::mavsdk
-  MAVSDK::mavsdk_telemetry
 )
