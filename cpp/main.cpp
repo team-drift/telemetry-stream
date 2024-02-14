@@ -10,6 +10,11 @@ using namespace std::this_thread;
 using namespace std::chrono;
 
 int main(int argc, char** argv) {
+
+    // Preventing unused parameter warning/error
+    (void)argc;
+    (void)argv; 
+
     Mavsdk mavsdk;
 
     // Setup connection
