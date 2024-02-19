@@ -7,7 +7,7 @@ import time
 # https://github.com/ArduPilot/pymavlink/blob/master/tools/mavtelemetry_datarates.py
 # ESTIMATOR_STATUS -> pos_horiz_accuracy
 
-def connect(connection_string, baud=57600):
+def connect(connection_string, baud=14445):
     # Connect to the vehicle
     mav = mavutil.mavlink_connection(
         connection_string,
@@ -56,7 +56,7 @@ def record_data(mav):
         mav.close()
 
 if __name__ == "__main__":
-    connection_string = "/dev/cu.usbserial-D30F0LHK"
+    connection_string = "udp:localhost:14445"
     mav = connect(connection_string)
     request_data_stream(mav, stream_rate=3)
     request_data_stream(mav, stream_id=mavutil.mavlink.MAV_DATA_STREAM_POSITION, stream_rate=50) # position

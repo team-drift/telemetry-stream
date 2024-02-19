@@ -9,6 +9,8 @@ This is a C++ implementation for streaming telemetry data. We primarily utilize 
 ## `deprecated`
 The `deprecated` folder contains a python implementation for telemetry streaming which heavily utilizes [`pymavlink`](https://github.com/ArduPilot/pymavlink). Though still functional, we opted to refactor in C++ as performance must be optimized.
 
+
+
 ## Developer Notes
 
 ### Prior Knowledge
@@ -43,3 +45,6 @@ Once all is complete, you should be set to start developing! [Examples](https://
 
 # How to use
 This section (will soon) outlines how to physically setup telemetry streaming from the drone to the ground station (us). 
+
+## `deprecated`
+You can use the `deprecrated/stream_data.py` as a quick validation that your `baud` and `connection_string` is correct. Simply plug in the aformentioned parameters into `stream_data.py` then run the file. 
