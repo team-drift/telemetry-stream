@@ -30,19 +30,17 @@ Read the following pieces of documentation (in a *BFS* manner) before developing
 To begin developing, read the notes below as you follow the whole [C++ Quickstart](https://mavsdk.mavlink.io/main/en/cpp/quickstart.html?q=) for your machine's OS.
 
 
-0. 
-    After the [Install MAVSDK library](https://mavsdk.mavlink.io/main/en/cpp/quickstart.html#install-mavsdk-library) section, check its version. For example, if you're on macOS, then `brew info mavsdk`. You may run into a versioning discrepancy issue between the `mavsdk` library installed during the Install MAVSDK Library section and the `mavsdk` repository in the [Build and Try Example](https://mavsdk.mavlink.io/main/en/cpp/quickstart.html#build_examples) section. 
+After the [Install MAVSDK library](https://mavsdk.mavlink.io/main/en/cpp/quickstart.html#install-mavsdk-library) section, check its version. For example, if you're on macOS, then `brew info mavsdk`. You may run into a versioning discrepancy issue between the `mavsdk` library installed during the Install MAVSDK Library section and the `mavsdk` repository in the [Build and Try Example](https://mavsdk.mavlink.io/main/en/cpp/quickstart.html#build_examples) section. 
 
-    If the versions between the library and the repository differ, simply pull the whole version of the repo that matches the library, or alternatively  copy and paste the `takeoff_and_land` example code from the version of the repo that matches the library. To switch to the appropiate version of the MAVSDK repo: 
-    - go to the [MAVSDK repository](https://github.com/mavlink/MAVSDK) 
-    - Click on "main" -> "Tags"
-    - Select the appropriate version
+If the versions between the library and the repository differ, simply pull the whole version of the repo that matches the library, or alternatively  copy and paste the `takeoff_and_land` example code from the version of the repo that matches the library. To switch to the appropiate version of the MAVSDK repo: 
+- go to the [MAVSDK repository](https://github.com/mavlink/MAVSDK) 
+- Click on "main" -> "Tags"
+- Select the appropriate version
 
 
-1.
-    Once you reach the `Setting up a Simulator` subsection, you may want to [set up the PX4 SITL developer environment](https://docs.px4.io/master/en/dev_setup/dev_env.html) rather than use a [pre-built docker container to run PX4 and the simulator](https://github.com/JonasVautherin/px4-gazebo-headless).
+Once you reach the `Setting up a Simulator` subsection, you may want to [set up the PX4 SITL developer environment](https://docs.px4.io/master/en/dev_setup/dev_env.html) rather than use a [pre-built docker container to run PX4 and the simulator](https://github.com/JonasVautherin/px4-gazebo-headless).
 
-    If you do the latter, you will find a toggle button dedicated to "Apple M1 Macbook users" instructing them to essentially make an x86 terminal. However, it is not possible to duplicate a terminal for OS versions Ventura and beyond. Fortunately, there is [a great workaround](https://stackoverflow.com/questions/74198234/duplication-of-terminal-in-macos-ventura). 
+If you do the latter, you will find a toggle button dedicated to "Apple M1 Macbook users" instructing them to essentially make an x86 terminal. However, it is not possible to duplicate a terminal for OS versions Ventura and beyond. Fortunately, there is [a great workaround](https://stackoverflow.com/questions/74198234/duplication-of-terminal-in-macos-ventura). 
 
 
 ## How to use
