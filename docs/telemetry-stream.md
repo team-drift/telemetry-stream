@@ -36,7 +36,8 @@ To begin developing, read the notes below as you follow the whole [C++ Quickstar
     If the versions between the library and the repository differ, simply pull the whole version of the repo that matches the library, or alternatively  copy and paste the `takeoff_and_land` example code from the version of the repo that matches the library. To switch to the appropiate version of the MAVSDK repo: 
     - go to the [MAVSDK repository](https://github.com/mavlink/MAVSDK) 
     - Click on "main" -> "Tags"
-    - Select the appropiate version
+    - Select the appropriate version
+
 
 1.
     Once you reach the `Setting up a Simulator` subsection, you may want to [set up the PX4 SITL developer environment](https://docs.px4.io/master/en/dev_setup/dev_env.html) rather than use a [pre-built docker container to run PX4 and the simulator](https://github.com/JonasVautherin/px4-gazebo-headless).
