@@ -48,3 +48,29 @@ This section (will soon) outlines how to physically setup telemetry streaming fr
 
 ### Test Connection
 You can use the `deprecrated/stream_data.py` as a quick validation that your `baud` and `connection_string` is correct. Simply plug in the aformentioned parameters into `stream_data.py` then run the file. 
+
+### Download QgroundControl 
+http://qgroundcontrol.com/downloads/
+
+### Download PX-4 and make jmav
+
+Run this command after changing directory to the PX4-Autopilot directory. Also, make sure Qgroundcontrol is running. 
+
+make px4_sitl jmavsim 
+
+### Check to see if Qgroundcontrol ports and takeoff and land ports are set to 14540 (Or, whatever port we want. Just have it be uniform)
+
+Go to the top left of Qground and see application settings, MAVLink, and check if the hostname is localhost:14445
+
+
+### Start up the simulation 
+https://mavsdk.mavlink.io/main/en/cpp/quickstart.html
+
+Follow this tutorial and then change this command to our correct port of 14445. make sure qground control is running 
+
+build/takeoff_and_land udp://:14540 
+
+
+### Take off in Qground Control 
+
+Press take off in the left in Qground and jmav should display a drone
