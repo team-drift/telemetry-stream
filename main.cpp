@@ -17,36 +17,75 @@ using namespace mavsdk;
 using namespace std::chrono;
 
 
-void handle_client(int client_socket, std::shared_ptr<Telemetry> telemetry) {
-    /*
-    Handles data transmission to Client(Agogos Pipeline)
+#include <nlohmann/json.hpp>
 
-    Data is transmitted as a string
-    */
+// For convenience
+using json = nlohmann::json;
 
-    telemetry->subscribe_position([client_socket](Telemetry::Position position) {
-        /*
-        Takes in position to use in socket communcation
-        */
+// Global variable to hold telemetry data
+json telemetryData = json::object();
 
-        //Construct Message
-        std::string message = std::to_string(position.relative_altitude_m) + ", " + std::to_string(position.latitude_deg) + ", " + std::to_string(position.longitude_deg) + "\n";
- 
-        //Sending Length Data
-        int length = message.length();
-        if (send(client_socket, &length, sizeof(length), 0) < 0) {
+void updateTelemetryData(const json& newData) {
+    for (auto& [key, value] : newData.items()) {
+        telemetryData[key] = value;
+    }
+}
+
+void subscribeTelemetry(std::shared_ptr<Telemetry> telemetry, int clientSocket) {
+    telemetry->subscribe_position([](Telemetry::Position position) {
+        updateTelemetryData({
+            {"relative_altitude_m", position.relative_altitude_m},
+            {"latitude_deg", position.latitude_deg},
+            {"longitude_deg", position.longitude_deg}
+        });
+    });
+
+    telemetry->subscribe_attitude_angular_velocity_body([](Telemetry::AngularVelocityBody angularVelocity) {
+        updateTelemetryData({
+            {"roll_rad_s", angularVelocity.roll_rad_s},
+            {"pitch_rad_s", angularVelocity.pitch_rad_s},
+            {"yaw_rad_s", angularVelocity.yaw_rad_s}
+        });
+    });
+
+    telemetry->subscribe_velocity_ned([](Telemetry::VelocityNed velocity) {
+        updateTelemetryData({
+            {"north_m_s", velocity.north_m_s},
+            {"east_m_s", velocity.east_m_s},
+            {"down_m_s", velocity.down_m_s}
+        });
+    });
+
+    telemetry->subscribe_attitude_euler([clientSocket](Telemetry::EulerAngle euler_angle) {
+        updateTelemetryData({
+            {"roll_deg", euler_angle.roll_deg},
+            {"pitch_deg", euler_angle.pitch_deg},
+            {"yaw_deg", euler_angle.yaw_deg}
+        });
+
+        // Convert the updated telemetry data to a string to send
+        std::string message_str = telemetryData.dump() + "\n"; // Adding newline for client-side parsing convenience
+
+        // Send the telemetry data's length first
+        int length = message_str.length();
+        if (send(clientSocket, &length, sizeof(length), 0) < 0) {
             perror("send length");
             return;
         }
 
-        //Sending Message
-        if (send(client_socket, message.c_str(), length, 0) < 0) {
+        // Send the actual telemetry data as a string
+        if (send(clientSocket, message_str.c_str(), length, 0) < 0) {
             perror("send message");
             return;
         }
     });
+}
 
-    std::this_thread::sleep_for(seconds(10));
+
+void handle_client(int client_socket, std::shared_ptr<Telemetry> telemetry) {
+    subscribeTelemetry(telemetry, client_socket);
+
+    close(client_socket);
 }
 
 int main() {
