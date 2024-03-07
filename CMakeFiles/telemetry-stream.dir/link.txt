@@ -1,0 +1,1 @@
+/Library/Developer/CommandLineTools/usr/bin/c++  -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX13.1.sdk -mmacosx-version-min=12.6 -Wl,-search_paths_first -Wl,-headerpad_max_install_names "CMakeFiles/telemetry-stream.dir/main.cpp.o" -o telemetry-stream  -Wl,-rpath,/usr/local/lib /usr/local/lib/libmavsdk.1.4.18.dylib 

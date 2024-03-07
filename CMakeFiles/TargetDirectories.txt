@@ -1,0 +1,3 @@
+/Users/swabhankatkoori/telemetry-stream/CMakeFiles/telemetry-stream.dir
+/Users/swabhankatkoori/telemetry-stream/CMakeFiles/edit_cache.dir
+/Users/swabhankatkoori/telemetry-stream/CMakeFiles/rebuild_cache.dir
