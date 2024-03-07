@@ -16,7 +16,6 @@
 using namespace mavsdk;
 using namespace std::chrono;
 
-
 #include <nlohmann/json.hpp>
 
 // For convenience
@@ -64,20 +63,35 @@ void subscribeTelemetry(std::shared_ptr<Telemetry> telemetry, int clientSocket) 
         });
 
         // Convert the updated telemetry data to a string to send
-        std::string message_str = telemetryData.dump() + "\n"; // Adding newline for client-side parsing convenience
+        std::string message_str = telemetryData.dump() + "\n";
+
+        std::cout << message_str << std::endl;
 
         // Send the telemetry data's length first
         int length = message_str.length();
-        if (send(clientSocket, &length, sizeof(length), 0) < 0) {
+
+        // Use ssize_t for the return type of send
+        ssize_t sent_length = send(clientSocket, &length, sizeof(length), 0);
+        if (sent_length == -1) {
             perror("send length");
+            return;
+        } else if (sent_length < static_cast<ssize_t>(sizeof(length))) {
+            // Handle partial send if necessary
+            std::cerr << "Incomplete send for length" << std::endl;
             return;
         }
 
         // Send the actual telemetry data as a string
-        if (send(clientSocket, message_str.c_str(), length, 0) < 0) {
+        ssize_t sent_data = send(clientSocket, message_str.c_str(), length, 0);
+        if (sent_data == -1) {
             perror("send message");
             return;
+        } else if (sent_data < length) {
+            // Handle partial send if necessary
+            std::cerr << "Incomplete send for message" << std::endl;
+            return;
         }
+
     });
 }
 
@@ -85,7 +99,6 @@ void subscribeTelemetry(std::shared_ptr<Telemetry> telemetry, int clientSocket) 
 void handle_client(int client_socket, std::shared_ptr<Telemetry> telemetry) {
     subscribeTelemetry(telemetry, client_socket);
 
-    close(client_socket);
 }
 
 int main() {
