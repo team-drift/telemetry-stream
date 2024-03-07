@@ -62,36 +62,43 @@ void subscribeTelemetry(std::shared_ptr<Telemetry> telemetry, int clientSocket) 
             {"yaw_deg", euler_angle.yaw_deg}
         });
 
-        // Convert the updated telemetry data to a string to send
-        std::string message_str = telemetryData.dump() + "\n";
+        if (telemetryData.contains("relative_altitude_m") &&
+            telemetryData.contains("latitude_deg") &&
+            telemetryData.contains("longitude_deg") &&
+            telemetryData.contains("roll_rad_s") &&
+            telemetryData.contains("pitch_rad_s") &&
+            telemetryData.contains("yaw_rad_s") &&
+            telemetryData.contains("north_m_s") &&
+            telemetryData.contains("east_m_s") &&
+            telemetryData.contains("down_m_s")) {
 
-        std::cout << message_str << std::endl;
+            // Convert the updated telemetry data to a string to send
+            std::string message_str = telemetryData.dump() + "\n";
 
-        // Send the telemetry data's length first
-        int length = message_str.length();
+            int length = message_str.length();
 
-        // Use ssize_t for the return type of send
-        ssize_t sent_length = send(clientSocket, &length, sizeof(length), 0);
-        if (sent_length == -1) {
-            perror("send length");
-            return;
-        } else if (sent_length < static_cast<ssize_t>(sizeof(length))) {
-            // Handle partial send if necessary
-            std::cerr << "Incomplete send for length" << std::endl;
-            return;
+            // Use ssize_t for the return type of send
+            ssize_t sent_length = send(clientSocket, &length, sizeof(length), 0);
+            if (sent_length == -1) {
+                perror("send length");
+                return;
+            } else if (sent_length < static_cast<ssize_t>(sizeof(length))) {
+                // Handle partial send if necessary
+                std::cerr << "Incomplete send for length" << std::endl;
+                return;
+            }
+
+            // Send the actual telemetry data as a string
+            ssize_t sent_data = send(clientSocket, message_str.c_str(), length, 0);
+            if (sent_data == -1) {
+                perror("send message");
+                return;
+            } else if (sent_data < length) {
+                // Handle partial send if necessary
+                std::cerr << "Incomplete send for message" << std::endl;
+                return;
+            }
         }
-
-        // Send the actual telemetry data as a string
-        ssize_t sent_data = send(clientSocket, message_str.c_str(), length, 0);
-        if (sent_data == -1) {
-            perror("send message");
-            return;
-        } else if (sent_data < length) {
-            // Handle partial send if necessary
-            std::cerr << "Incomplete send for message" << std::endl;
-            return;
-        }
-
     });
 }
 
@@ -168,7 +175,6 @@ int main() {
 
         std::thread([clientSocket, telemetry]() {
             handle_client(clientSocket, telemetry);
-            close(clientSocket);
         }).detach();
     }
 
