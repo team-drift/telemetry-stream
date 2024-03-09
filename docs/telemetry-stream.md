@@ -46,5 +46,28 @@ If you do the latter, you will find a toggle button dedicated to "Apple M1 Macbo
 ## How to use
 This section (will soon) outlines how to physically setup telemetry streaming from the drone to the ground station (us). 
 
-### Test Connection
 You can use the `deprecrated/stream_data.py` as a quick validation that your `baud` and `connection_string` is correct. Simply plug in the aformentioned parameters into `stream_data.py` then run the file. 
+
+Otherwise, you can follow the steps below to setup a simulated drone rather than a physical drone to verify telemetry data streaming is working.
+### Test Simulation
+1. Download [QGroundControl](http://qgroundcontrol.com/downloads/) and simply open it.
+
+2. Download PX-4 and start the simulation.
+    
+    Open a terminal. Run the following:
+    ```
+    git clone https://github.com/PX4/PX4-Autopilot.git --recursive
+    cd PX4-Autopilot
+    make px4_sitl jmavsim
+    ```
+
+3. Ensure Proper Configurations 
+    
+    Ensure QGroundControl ports and \<insert testing file such as `takeoff_and_land.cpp`\> ports are set to `14540` (Or, whatever port we want. Just have it be uniform.)
+
+    Go to the top left of QGroundCountrol -> Application Settings -> MAVLink, and check if the hostname is `localhost:14445`
+
+
+4. Start up the simulation 
+    
+    Simply follow the rest of the instructions outlined [here](https://mavsdk.mavlink.io/main/en/cpp/quickstart.html#build_examples).
