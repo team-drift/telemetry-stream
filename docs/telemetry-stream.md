@@ -46,31 +46,28 @@ If you do the latter, you will find a toggle button dedicated to "Apple M1 Macbo
 ## How to use
 This section (will soon) outlines how to physically setup telemetry streaming from the drone to the ground station (us). 
 
-### Test Connection
 You can use the `deprecrated/stream_data.py` as a quick validation that your `baud` and `connection_string` is correct. Simply plug in the aformentioned parameters into `stream_data.py` then run the file. 
 
-### Download QgroundControl 
-http://qgroundcontrol.com/downloads/
+Otherwise, you can follow the steps below to setup a simulated drone rather than a physical drone to verify telemetry data streaming is working.
+### Test Simulation
+1. Download [QGroundControl](http://qgroundcontrol.com/downloads/) and simply open it.
 
-### Download PX-4 and make jmav
+2. Download PX-4 and build the simulation.
+    
+    Open a terminal. Run the following:
+    ```
+    git clone https://github.com/PX4/PX4-Autopilot.git --recursive
+    cd PX4-Autopilot
+    make px4_sitl jmavsim
+    ```
 
-Run this command after changing directory to the PX4-Autopilot directory. Also, make sure Qgroundcontrol is running. 
+3. Ensure Proper Configurations 
+    
+    Ensure QGroundControl ports and \<insert testing file such as `takeoff_and_land.cpp`\> ports are set to `14540` (Or, whatever port we want. Just have it be uniform.)
 
-make px4_sitl jmavsim 
-
-### Check to see if Qgroundcontrol ports and takeoff and land ports are set to 14540 (Or, whatever port we want. Just have it be uniform)
-
-Go to the top left of Qground and see application settings, MAVLink, and check if the hostname is localhost:14445
-
-
-### Start up the simulation 
-https://mavsdk.mavlink.io/main/en/cpp/quickstart.html
-
-Follow this tutorial and then change this command to our correct port of 14445. make sure qground control is running 
-
-build/takeoff_and_land udp://:14540 
+    Go to the top left of QGroundCountrol -> Application Settings -> MAVLink, and check if the hostname is `localhost:14445`
 
 
-### Take off in Qground Control 
-
-Press take off in the left in Qground and jmav should display a drone
+4. Start up the simulation 
+    
+    Simply follow the rest of the instructions outlined [here](https://mavsdk.mavlink.io/main/en/cpp/quickstart.html#build_examples).
