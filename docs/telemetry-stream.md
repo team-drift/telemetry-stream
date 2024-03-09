@@ -52,7 +52,7 @@ Otherwise, you can follow the steps below to setup a simulated drone rather than
 ### Test Simulation
 1. Download [QGroundControl](http://qgroundcontrol.com/downloads/) and simply open it.
 
-2. Download PX-4 and start the simulation.
+2. Download PX-4 and build the simulation.
     
     Open a terminal. Run the following:
     ```
