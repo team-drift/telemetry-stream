@@ -44,7 +44,12 @@ If you do the latter, you will find a toggle button dedicated to "Apple M1 Macbo
 
 
 ## How to use
-This section (will soon) outlines how to physically setup telemetry streaming from the drone to the ground station (us). 
+This section (will soon) outlines how to physically setup telemetry streaming from the drone to the ground station (us).
+
+## Installations 
+Run the command: 
+
+brew install nlohmann-json 
 
 You can use the `deprecrated/stream_data.py` as a quick validation that your `baud` and `connection_string` is correct. Simply plug in the aformentioned parameters into `stream_data.py` then run the file. 
 
