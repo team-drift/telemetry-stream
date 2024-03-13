@@ -85,7 +85,7 @@ You can use the `deprecrated/stream_data.py` as a quick validation that your `ba
 
 Otherwise, you can follow the steps from "Test Simulation" to setup a simulated drone rather than a physical drone to verify telemetry data streaming is working.
 
-### Run
+### Run `telemetry_stream.cpp`
 1. Build the executable
     ```
     cmake -Bbuild -H.
@@ -95,4 +95,16 @@ Otherwise, you can follow the steps from "Test Simulation" to setup a simulated 
     ```
     build/telemetry_stream udp://:14540
     ```
-    
+
+### Run the `main.cpp`
+
+1. start up px4 jmav
+2. in this repo run the command:
+    ./telemetry-stream 
+
+you can run 
+    commander takeoff
+    commander land
+
+this run `simulation.py` in agogos
+
