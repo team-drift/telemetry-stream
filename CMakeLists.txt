@@ -1,20 +1,22 @@
-cmake_minimum_required(VERSION 3.15)
-project(telemetry-stream)
+cmake_minimum_required(VERSION 3.10.2)
 
-# Set the C++ standard
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-# Enable strict handling of warnings
-add_definitions("-Wall -Wextra -Werror")
+project(telemetry_stream)
 
-# Find MAVSDK package
+add_executable(telemetry_stream
+    telemetry_stream.cpp
+)
+
 find_package(MAVSDK REQUIRED)
 
-# Add executable target with source files
-add_executable(telemetry-stream main.cpp)
-
-# Link MAVSDK library
-target_link_libraries(telemetry-stream
-  MAVSDK::mavsdk
+target_link_libraries(telemetry_stream
+    MAVSDK::mavsdk
 )
+
+if(NOT MSVC)
+    add_compile_options(telemetry_stream PRIVATE -Wall -Wextra)
+else()
+    add_compile_options(telemetry_stream PRIVATE -WX -W2)
+endif()
