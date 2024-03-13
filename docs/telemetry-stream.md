@@ -76,3 +76,18 @@ Otherwise, you can follow the steps below to setup a simulated drone rather than
 4. Start up the simulation 
     
     Simply follow the rest of the instructions outlined [here](https://mavsdk.mavlink.io/main/en/cpp/quickstart.html#build_examples).
+
+
+
+
+Run the telemetry stream 
+
+1. start up px4 jmav
+2. in this repo run the command:
+    ./telemetry-stream 
+
+you can run 
+    commander takeoff
+    commander land
+
+this run simulation.py in agogos
