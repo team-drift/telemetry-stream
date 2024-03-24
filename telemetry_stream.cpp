@@ -67,7 +67,7 @@ int main(int argc, char** argv)
     std::cout << "Connection URL: " << connection_url << '\n';
 
     // Initialize mavsdk object with GroundStation component type; establish connection to drone
-    Mavsdk mavsdk{Mavsdk::Configuration{Mavsdk::ComponentType::GroundStation}};
+    Mavsdk mavsdk;
     ConnectionResult connection_result = mavsdk.add_any_connection(connection_url);
 
     // Ensure connection is successful
@@ -77,15 +77,17 @@ int main(int argc, char** argv)
     }
 
     // Search for autopilot (drone) system
-    auto system = mavsdk.first_autopilot(3.0);
+    auto systems = mavsdk.systems();
     if (!system) {
         std::cerr << "Timed out waiting for system\n";
         return 1;
     }
 
     // Instantiate plugins
-    auto telemetry = Telemetry{system.value()};
-    auto action = Action{system.value()};
+    auto system = systems.at(0);
+
+    auto telemetry = Telemetry{system};
+    auto action = Action{system};
 
     // Set rate for position updates
     // https://mavsdk.mavlink.io/main/en/cpp/api_reference/classmavsdk_1_1_telemetry.html#classmavsdk_1_1_telemetry_1a665439f3d5f8c58b3ef3dd427cf4782b

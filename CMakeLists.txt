@@ -9,9 +9,20 @@ add_executable(telemetry_stream
     telemetry_stream.cpp
 )
 
+add_executable(telemetry_stream_async
+    telemetry_stream_async.cpp
+)
+
+
+
 find_package(MAVSDK REQUIRED)
 
 target_link_libraries(telemetry_stream
+    MAVSDK::mavsdk
+)
+
+
+target_link_libraries(telemetry_stream_async
     MAVSDK::mavsdk
 )
 
