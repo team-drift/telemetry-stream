@@ -24,8 +24,6 @@ using json = nlohmann::json;
 // Global variable to hold telemetry data
 json telemetryData = json::object();
 
-int lastTime = 0;
-
 void updateTelemetryData(const json& newData) {
     for (auto& [key, value] : newData.items()) {
         telemetryData[key] = value;
@@ -49,11 +47,11 @@ void subscribeTelemetry(std::shared_ptr<Telemetry> telemetry, int clientSocket) 
         });
     });
 
-    telemetry->subscribe_attitude_angular_velocity_body([](Telemetry::AngularVelocityBody angularVelocity) {
+    telemetry->subscribe_velocity_ned([](Telemetry::VelocityNed velocity) {
         updateTelemetryData({
-            {"roll_rad_s", angularVelocity.roll_rad_s},
-            {"pitch_rad_s", angularVelocity.pitch_rad_s},
-            {"yaw_rad_s", angularVelocity.yaw_rad_s}
+            {"north_m_s", velocity.north_m_s},
+            {"east_m_s", velocity.east_m_s},
+            {"down_m_s", velocity.down_m_s}
         });
     });
 
@@ -82,10 +80,9 @@ void subscribeTelemetry(std::shared_ptr<Telemetry> telemetry, int clientSocket) 
             {"roll_deg", euler_angle.roll_deg},
             {"pitch_deg", euler_angle.pitch_deg},
             {"yaw_deg", euler_angle.yaw_deg},
-            {"timestamp", euler_angle.timestamp_us}
+            {"timestamp", euler_angle.timestamp_us},
         });
 
-        std::cout << telemetryData << std::endl;
         if (telemetryData.contains("relative_altitude_m") &&
             telemetryData.contains("latitude_deg") &&
             telemetryData.contains("longitude_deg") &&
@@ -94,47 +91,34 @@ void subscribeTelemetry(std::shared_ptr<Telemetry> telemetry, int clientSocket) 
             telemetryData.contains("yaw_rad_s") &&
             telemetryData.contains("north_m_s") &&
             telemetryData.contains("east_m_s") &&
-            telemetryData.contains("down_m_s") &&
-            telemetryData.contains("timestamp")&&
-            telemetryData.contains("airspeed_m_s")&&
-            telemetryData.contains("throttle_percentage")&&
-            telemetryData.contains("climb_rate_m_s")&&
-            telemetryData.contains("acceleration_frd")&&
-            telemetryData.contains("angular_velocity_frd") &&
-            telemetryData.contains("temperature_degc") &&
-            telemetryData.contains("magnetic_field_fr") &&
-            telemetryData.contains("temperature_degc")  &&
-            telemetryData.contains("timestamp_us_imu")){
+            telemetryData.contains("down_m_s")) {
 
             // Convert the updated telemetry data to a string to send
             std::string message_str = telemetryData.dump() + "\n";
 
             int length = message_str.length();
 
-            if(telemetryData["timestamp"] != lastTime){
-                // Use ssize_t for the return type of send
-                ssize_t sent_length = send(clientSocket, &length, sizeof(length), 0);
-                if (sent_length == -1) {
-                    perror("send length");
-                    return;
-                } else if (sent_length < static_cast<ssize_t>(sizeof(length))) {
-                    // Handle partial send if necessary
-                    std::cerr << "Incomplete send for length" << std::endl;
-                    return;
-                }
-
-                // Send the actual telemetry data as a string
-                ssize_t sent_data = send(clientSocket, message_str.c_str(), length, 0);
-                if (sent_data == -1) {
-                    perror("send message");
-                    return;
-                } else if (sent_data < length) {
-                    // Handle partial send if necessary
-                    std::cerr << "Incomplete send for message" << std::endl;
-                    return;
-                }
+            // Use ssize_t for the return type of send
+            ssize_t sent_length = send(clientSocket, &length, sizeof(length), 0);
+            if (sent_length == -1) {
+                perror("send length");
+                return;
+            } else if (sent_length < static_cast<ssize_t>(sizeof(length))) {
+                // Handle partial send if necessary
+                std::cerr << "Incomplete send for length" << std::endl;
+                return;
             }
-            lastTime = telemetryData["timestamp"];
+
+            // Send the actual telemetry data as a string
+            ssize_t sent_data = send(clientSocket, message_str.c_str(), length, 0);
+            if (sent_data == -1) {
+                perror("send message");
+                return;
+            } else if (sent_data < length) {
+                // Handle partial send if necessary
+                std::cerr << "Incomplete send for message" << std::endl;
+                return;
+            }
         }
     });
 }
