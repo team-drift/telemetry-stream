@@ -12,6 +12,7 @@
 #include <thread>
 #include <atomic>
 #include <vector>
+#include <cstdlib>
 
 using namespace mavsdk;
 using namespace std::chrono;
@@ -21,8 +22,21 @@ using namespace std::chrono;
 // For convenience
 using json = nlohmann::json;
 
+//To allow handling of Keyboard Interrupts
+std::atomic<bool> keepRunning(true);
+
 // Global variable to hold telemetry data
 json telemetryData = json::object();
+
+int serverSocket;
+
+void signalHandler(int signal) {
+    if (signal == SIGINT) {
+        std::cout << "Keyboard Interrupt received, closing server socket." << std::endl;
+        close(serverSocket);
+        exit(EXIT_SUCCESS);
+    }
+}
 
 void updateTelemetryData(const json& newData) {
     for (auto& [key, value] : newData.items()) {
@@ -31,6 +45,8 @@ void updateTelemetryData(const json& newData) {
 }
 
 void subscribeTelemetry(std::shared_ptr<Telemetry> telemetry, int clientSocket) {
+    std::signal(SIGINT, signalHandler);
+
     telemetry->subscribe_position([](Telemetry::Position position) {
         updateTelemetryData({
             {"relative_altitude_m", position.relative_altitude_m},
@@ -126,13 +142,21 @@ void subscribeTelemetry(std::shared_ptr<Telemetry> telemetry, int clientSocket) 
 
 void handle_client(int client_socket, std::shared_ptr<Telemetry> telemetry) {
     subscribeTelemetry(telemetry, client_socket);
-
 }
 
+
 int main() {
+    std::signal(SIGINT, signalHandler);
 
     //Create connection for MavSDK
-    Mavsdk mavsdk;
+    Mavsdk::ComponentType componentType = Mavsdk::ComponentType::Autopilot;
+
+    // Create a configuration object for Mavsdk
+    Mavsdk::Configuration config(componentType);
+
+    // Create an instance of Mavsdk using the configuration
+    Mavsdk mavsdk(config);
+    
     const std::string connection_url = "udp://0.0.0.0:14540";
     ConnectionResult connection_result = mavsdk.add_any_connection(connection_url);
 
@@ -163,8 +187,8 @@ int main() {
     auto system = fut.get();
     auto telemetry = std::make_shared<Telemetry>(system);
 
-    //Create Socker Communication between Server(this) and Client(Agogos)
-    int serverSocket = socket(AF_INET, SOCK_STREAM, 0);
+    //Create Socket Communication between Server(this) and Client(Agogos)
+    serverSocket = socket(AF_INET, SOCK_STREAM, 0);
     if (serverSocket == -1) {
         std::cerr << "Failed to create socket." << std::endl;
         return -1;
@@ -187,7 +211,8 @@ int main() {
     //Server Connected
     std::cout << "Server listening on port 12345" << std::endl;
 
-    while (true) {
+    while (keepRunning) {
+        std::cout << "running" << std::endl;
         int clientSocket = accept(serverSocket, NULL, NULL);
         if (clientSocket == -1) {
             std::cerr << "Failed to accept client." << std::endl;
@@ -201,5 +226,7 @@ int main() {
 
     // Cleanup
     close(serverSocket);
+    std::cout << "Socket Closed" << std::endl;
+    exit(EXIT_SUCCESS);
     return 0;
 }

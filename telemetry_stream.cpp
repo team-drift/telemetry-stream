@@ -66,8 +66,13 @@ int main(int argc, char** argv)
     std::cout << "Program Name: " << program_name << '\n';
     std::cout << "Connection URL: " << connection_url << '\n';
 
-    // Initialize mavsdk object with GroundStation component type; establish connection to drone
-    Mavsdk mavsdk;
+    Mavsdk::ComponentType componentType = Mavsdk::ComponentType::Autopilot;
+
+    // Create a configuration object for Mavsdk
+    Mavsdk::Configuration config(componentType);
+
+    // Create an instance of Mavsdk using the configuration
+    Mavsdk mavsdk(config);
     ConnectionResult connection_result = mavsdk.add_any_connection(connection_url);
 
     // Ensure connection is successful
