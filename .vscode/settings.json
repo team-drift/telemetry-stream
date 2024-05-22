@@ -1,6 +1,0 @@
-{
-    "files.associations": {
-        ".clang-tidy": "yaml",
-        "thread": "cpp"
-    }
-}
