@@ -1,5 +1,3 @@
-#include <mavsdk/mavsdk.h>
-#include <mavsdk/plugins/telemetry/telemetry.h>
 #include <future>
 #include <chrono>
 #include <csignal>
@@ -14,10 +12,13 @@
 #include <vector>
 #include <cstdlib>
 
-using namespace mavsdk;
-using namespace std::chrono;
+#include <mavsdk.h>
+#include <plugins/telemetry/telemetry.h>
 
 #include <nlohmann/json.hpp>
+
+using namespace mavsdk;
+using namespace std::chrono;
 
 // For convenience
 using json = nlohmann::json;
