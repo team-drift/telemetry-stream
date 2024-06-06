@@ -1,177 +1,168 @@
-// All Telemetry class methods
-// https://mavsdk.mavlink.io/main/en/cpp/guide/telemetry.html#api-overview
-
-#include <chrono>
-#include <cstdint>
-#include <mavsdk/mavsdk.h>
-#include <mavsdk/plugins/action/action.h>
-#include <mavsdk/plugins/telemetry/telemetry.h>
-#include <iostream>
 #include <future>
-#include <memory>
+#include <chrono>
+#include <csignal>
+#include <iostream>
+#include <netinet/in.h>
+#include <signal.h>
+#include <sys/socket.h>
+#include <unistd.h>
+#include <arpa/inet.h>
 #include <thread>
+#include <atomic>
+#include <vector>
+#include <cstdlib>
+#include <pybind11/pybind11.h>
+#include <pybind11/stl.h>
 
+#include <mavsdk.h>
+#include <plugins/telemetry/telemetry.h>
+
+#include <nlohmann/json.hpp>
+
+namespace py = pybind11;
 using namespace mavsdk;
-using std::chrono::seconds;
-using std::this_thread::sleep_for;
+using namespace std::chrono;
 
-void usage(const std::string& bin_name)
-{
-    std::cerr << "Usage : " << bin_name << " <connection_url>\n"
-              << "Connection URL format should be :\n"
-              << " For TCP : tcp://[server_host][:server_port]\n"
-              << " For UDP : udp://[bind_host][:bind_port]\n"
-              << " For Serial : serial:///path/to/serial/dev[:baudrate]\n"
-              << "For example, to connect to the simulator use URL: udp://:14540\n";
-}
+// For convenience
+using json = nlohmann::json;
 
-// Hold telemetry data received at a given time
-// Purely for printing output to console
-// Not to be thought of as "insurance" that we are actually
-// receiving all data fields at the same time
-struct TelemetryReceived {
-    std::atomic<double> altitude_m = 0.0;
-    std::atomic<double> airspeed_m_s = 0.0;
-    std::atomic<double> throttle_percentage = 0.0;
-    std::atomic<double> climb_rate_m_s = 0.0;
-    std::atomic<double> acceleration_forward_m_s2 = 0.0;
-    std::atomic<double> angular_velocity_forward_rad_s = 0.0;
+class Telemetry_Stream {
+    private:
+        //To allow handling of Keyboard Interrupts
+        std::atomic<bool> keepRunning = true;
+
+        // Global variable to hold telemetry data
+        json telemetryData = json::object();
+
+    public:
+        void updateTelemetryData(const json& newData) {
+            for (auto& [key, value] : newData.items()) {
+                telemetryData[key] = value;
+            }
+        }
+
+        void subscribeTelemetry(std::shared_ptr<Telemetry> telemetry) {
+            telemetry->subscribe_position([this](Telemetry::Position position) {
+                updateTelemetryData({
+                    {"relative_altitude_m", position.relative_altitude_m},
+                    {"latitude_deg", position.latitude_deg},
+                    {"longitude_deg", position.longitude_deg}
+                });
+            });
+
+            telemetry->subscribe_attitude_angular_velocity_body([this](Telemetry::AngularVelocityBody angularVelocity) {
+                updateTelemetryData({
+                    {"roll_rad_s", angularVelocity.roll_rad_s},
+                    {"pitch_rad_s", angularVelocity.pitch_rad_s},
+                    {"yaw_rad_s", angularVelocity.yaw_rad_s}
+                });
+            });
+
+            telemetry->subscribe_velocity_ned([this](Telemetry::VelocityNed velocity) {
+                updateTelemetryData({
+                    {"north_m_s", velocity.north_m_s},
+                    {"east_m_s", velocity.east_m_s},
+                    {"down_m_s", velocity.down_m_s}
+                });
+            });
+
+            telemetry->subscribe_fixedwing_metrics([this](Telemetry::FixedwingMetrics metrics) {
+                updateTelemetryData({
+                    {"airspeed_m_s", metrics.airspeed_m_s},
+                    {"throttle_percentage", metrics.throttle_percentage},
+                    {"climb_rate_m_s", metrics.climb_rate_m_s}
+                });
+            });
+
+            telemetry->subscribe_imu([this](Telemetry::Imu imu) {
+                json imuData;
+
+                imuData["acceleration_forward_m_s2"] = imu.acceleration_frd.forward_m_s2;
+                imuData["angular_velocity_forward_rad_s"] = imu.angular_velocity_frd.forward_rad_s;
+                imuData["magnetic_field_forward_gauss"] = imu.magnetic_field_frd.forward_gauss;
+                imuData["temperature_degc"] = imu.temperature_degc;
+                imuData["timestamp_us"] = imu.timestamp_us;
+
+                updateTelemetryData(imuData);
+            });
+
+            telemetry->subscribe_attitude_euler([this](Telemetry::EulerAngle euler_angle) {
+                updateTelemetryData({
+                    {"roll_deg", euler_angle.roll_deg},
+                    {"pitch_deg", euler_angle.pitch_deg},
+                    {"yaw_deg", euler_angle.yaw_deg},
+                    {"timestamp", euler_angle.timestamp_us},
+                });
+            });
+        }
+
+    std::string get_packet(){
+        // Convert the updated telemetry data to a string, easy to read
+        std::string message_str = telemetryData.dump() + "\n";
+
+        return message_str;
+    }
+
+
+    int start_process(){
+        //Create connection for MavSDK
+        Mavsdk::ComponentType componentType = Mavsdk::ComponentType::Autopilot;
+
+        // Create a configuration object for Mavsdk
+        Mavsdk::Configuration config(componentType);
+
+        // Create an instance of Mavsdk using the configuration
+        Mavsdk mavsdk(config);
+        
+        const std::string connection_url = "udp://0.0.0.0:14540";
+        ConnectionResult connection_result = mavsdk.add_any_connection(connection_url);
+
+        if (connection_result != ConnectionResult::Success) {
+            std::cerr << "Connection failed: " << connection_result << std::endl;
+            return -1;
+        }
+
+        //Connect Drone
+        std::cout << "Waiting for drone to connect..." << std::endl;
+        auto prom = std::promise<std::shared_ptr<System>>();
+        auto fut = prom.get_future();
+        mavsdk.subscribe_on_new_system([&mavsdk, &prom]() {
+            auto system = mavsdk.systems().at(0);
+
+            if (system->has_autopilot()) {
+                std::cout << "Drone discovered!" << std::endl;
+                prom.set_value(system);
+            }
+        });
+
+        if (fut.wait_for(seconds(2)) == std::future_status::timeout) {
+            std::cerr << "No drone found, exiting." << std::endl;
+            return -1;
+        }
+
+        //Initialize Telemetry
+        auto system = fut.get();
+        auto telemetry = std::make_shared<Telemetry>(system);
+
+        //Starts process of receiving telemetry data
+        subscribeTelemetry(telemetry);
+
+        return 1;
+    }
 };
 
-// Prints telemetry data that was received at a given time (the same time)
-void print_telemetry(const TelemetryReceived& telemetry_received) {
-    while (true) {
-        std::cout << "Altitude: " << telemetry_received.altitude_m << " m\n";
-        std::cout << "Airspeed: " << telemetry_received.airspeed_m_s << " m/s\n";
-        std::cout << "Throttle Percentage: " << telemetry_received.throttle_percentage << " %\n";
-        std::cout << "Climb rate: " << telemetry_received.climb_rate_m_s << " m/s\n";
-        std::cout << "Acceleration (Forward): " << telemetry_received.acceleration_forward_m_s2 << " m/s^2\n";
-        std::cout << "Angular Velocity (Forward): " << telemetry_received.angular_velocity_forward_rad_s << " rad/s\n";
-        sleep_for(seconds(1));
-    }
+int main() {
+    Telemetry_Stream t = Telemetry_Stream();
+    t.start_process();
+
+    std::cout << t.get_packet();
+    return 0;
 }
 
 
-int main(int argc, char** argv)
-{
-    // Ensure 2 arguments are provided (the program name and the connection URL)
-    if (argc != 2) {
-        usage(argv[0]);
-        return 1;
-    }
-
-    const std::string program_name = argv[0];
-    const std::string connection_url = argv[1];
-
-    std::cout << "Program Name: " << program_name << '\n';
-    std::cout << "Connection URL: " << connection_url << '\n';
-
-    Mavsdk::ComponentType componentType = Mavsdk::ComponentType::Autopilot;
-
-    // Create a configuration object for Mavsdk
-    Mavsdk::Configuration config(componentType);
-
-    // Create an instance of Mavsdk using the configuration
-    Mavsdk mavsdk(config);
-    ConnectionResult connection_result = mavsdk.add_any_connection(connection_url);
-
-    // Ensure connection is successful
-    if (connection_result != ConnectionResult::Success) {
-        std::cerr << "Connection failed: " << connection_result << '\n';
-        return 1;
-    }
-
-    // Search for autopilot (drone) system
-    auto systems = mavsdk.systems();
-    if (!system) {
-        std::cerr << "Timed out waiting for system\n";
-        return 1;
-    }
-
-    // Instantiate plugins
-    auto system = systems.at(0);
-
-    auto telemetry = Telemetry{system};
-    auto action = Action{system};
-
-    // Set rate for position updates
-    // https://mavsdk.mavlink.io/main/en/cpp/api_reference/classmavsdk_1_1_telemetry.html#classmavsdk_1_1_telemetry_1a665439f3d5f8c58b3ef3dd427cf4782b
-    const auto set_rate_position_result = telemetry.set_rate_position(1.0);
-    if (set_rate_position_result != Telemetry::Result::Success) {
-        std::cerr << "Setting rate for Position failed: " << set_rate_position_result << '\n';
-        return 1;
-    }
-
-
-    // Set rate for FixedwingMetrics updates
-    // https://mavsdk.mavlink.io/main/en/cpp/api_reference/classmavsdk_1_1_telemetry.html#classmavsdk_1_1_telemetry_1ab345a5925d132c27e0a5e1ab65a1e2c1
-    const auto set_rate_fixedwing_metrics_result = telemetry.set_rate_fixedwing_metrics(1.0);
-    if (set_rate_fixedwing_metrics_result != Telemetry::Result::Success) {
-        std::cerr << "Setting rate for FixedwingMetrics failed: " << set_rate_fixedwing_metrics_result << '\n';
-        return 1;
-    }
-
-    // Set rate for Imu updates
-    // https://mavsdk.mavlink.io/main/en/cpp/api_reference/classmavsdk_1_1_telemetry.html#classmavsdk_1_1_telemetry_1a4e0d1dc2350e06f68f472d85dc69d175
-    const auto set_rate_imu_result = telemetry.set_rate_imu(1.0);
-    if (set_rate_imu_result != Telemetry::Result::Success) {
-        std::cerr << "Setting rate for Imu failed: " << set_rate_imu_result << '\n';
-        return 1;
-    }
-    
-
-    TelemetryReceived telemetry_received;
-    std::thread print_thread(print_telemetry, std::ref(telemetry_received));
-
-    // Set up callback to monitor <insert data fields> data fields of Position
-    // https://mavsdk.mavlink.io/main/en/cpp/api_reference/structmavsdk_1_1_telemetry_1_1_position.html
-    telemetry.subscribe_position([&telemetry_received](Telemetry::Position position) {
-        telemetry_received.altitude_m = position.relative_altitude_m;
-
-        // std::cout << "Altitude: " << position.relative_altitude_m << " m\n";
-    });
-    
-    // Set up callback to monitor ALL data fields of FixedwingMetrics
-    // https://mavsdk.mavlink.io/main/en/cpp/api_reference/structmavsdk_1_1_telemetry_1_1_fixedwing_metrics.html
-    telemetry.subscribe_fixedwing_metrics([&telemetry_received](Telemetry::FixedwingMetrics fixedwing_metrics) {
-        telemetry_received.airspeed_m_s = fixedwing_metrics.airspeed_m_s;
-        telemetry_received.throttle_percentage = fixedwing_metrics.throttle_percentage;
-        telemetry_received.climb_rate_m_s = fixedwing_metrics.climb_rate_m_s;
-
-        // std::cout << "Airspeed: " << fixedwing_metrics.airspeed_m_s << " m/s\n";
-        // std::cout << "Throttle Percentage: " << fixedwing_metrics.throttle_percentage << " %\n";
-        // std::cout << "Climb rate: " << fixedwing_metrics.climb_rate_m_s << " m/s\n";
-    });
-
-    // Set up callback to monitor <insert data fields> data fields of Imu
-    // Imu data fields: https://mavsdk.mavlink.io/main/en/cpp/api_reference/structmavsdk_1_1_telemetry_1_1_imu.html
-    telemetry.subscribe_imu([&telemetry_received](Telemetry::Imu imu) {
-        telemetry_received.acceleration_forward_m_s2 = imu.acceleration_frd.forward_m_s2;
-        telemetry_received.angular_velocity_forward_rad_s = imu.angular_velocity_frd.forward_rad_s;
-
-
-        // std::cout << "Acceleration (Forward): " << imu.acceleration_frd.forward_m_s2 << " m/s^2\n";
-        // std::cout << "Angular Velocity (Forward): " << imu.angular_velocity_frd.forward_rad_s << " rad/s\n";
-    });
-
-    // Check until vehicle is ready to arm
-    while (telemetry.health_all_ok() != true) {
-        std::cout << "Vehicle is getting ready to arm\n";
-        sleep_for(seconds(1));
-    }
-
-    // Arm vehicle
-    std::cout << "Arming...\n";
-    const Action::Result arm_result = action.arm();
-
-    if (arm_result != Action::Result::Success) {
-        std::cerr << "Arming failed: " << arm_result << '\n';
-        return 1;
-    }
-
-    // We are relying on auto-disarming but let's keep watching the telemetry for a bit longer.
-    sleep_for(seconds(100));
-    std::cout << "Finished...\n";
-
-    return 0;
+PYBIND11_MODULE(telemetry_bindings, m) {
+    py::class_<Telemetry_Stream>(m, "Telemetry_Stream")
+        .def(py::init<>())
+        .def("start_process", &Telemetry_Stream::start_process)
+        .def("get_packet", &Telemetry_Stream::get_packet);
 }
