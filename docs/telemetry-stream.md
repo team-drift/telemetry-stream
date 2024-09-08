@@ -108,3 +108,10 @@ you can run
 
 this run `simulation.py` in agogos
 
+# Python Bindings
+
+1. Excecute CMake file in the root directory with ```cmake .```
+2. Within /python_bindings, the module should be ready as a .so (shared object file)
+3. Within your Python File, you should know ```import _telemetry_stream```
+   The Python File should be in the same directory as the .so file
+
