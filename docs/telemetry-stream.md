@@ -70,6 +70,14 @@ Once you reach the `Setting up a Simulator` subsection, refer to "Test Simulatio
     
     Simply follow the rest of the instructions outlined [here](https://mavsdk.mavlink.io/main/en/cpp/quickstart.html#build_examples).
 
+### Additional Steps for ARM Architecture/Apple Silicon
+1. Download Anaconda
+2. Create environment for x86_64 architecture ```CONDA_SUBDIR=osx-64 conda create -n px4_x86 python=3.9```
+3. Activate ```conda activate px4_x86```
+4. Set Environment ```conda config --env --set subdir osx-64```
+
+** JMavSim's GUI does not work within ARM, to run the simulation without a gui, ```HEADLESS=1 make px4_sitl jmavsim```
+
 
 ## How to use telemetry_stream.cpp
 This section (will soon) outlines how to physically setup telemetry streaming from the drone to the ground station (us).
