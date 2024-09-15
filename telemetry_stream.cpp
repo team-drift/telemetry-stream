@@ -12,32 +12,67 @@
 #include <thread>
 #include <atomic>
 #include <vector>
+#include <nlohmann/json.hpp>
+#include <mutex>
+#include <cstdlib>
+#include <unistd.h>
+
+// #include <pybind11/pybind11.h>
 
 using namespace mavsdk;
 using namespace std::chrono;
-
-#include <nlohmann/json.hpp>
-
-// For convenience
 using json = nlohmann::json;
 
-// Global variable to hold telemetry data
+//--Global Variables
 json telemetryData = json::object();
+std::mutex telemetryDataMutex;
 
+// Create Global Connection for MavSDK
+Mavsdk::ComponentType componentType = Mavsdk::ComponentType::GroundStation;
+Mavsdk::Configuration config(componentType);
+Mavsdk mavsdkConnect(config);
+
+//MavSDK's Telemetry
+std::shared_ptr<Telemetry> telemetry;
+
+std::atomic<bool> running(true);
+
+std::thread telemetry_thread;
+
+//Updates Data
 void updateTelemetryData(const json& newData) {
+    std::lock_guard<std::mutex> lock(telemetryDataMutex);
+
     for (auto& [key, value] : newData.items()) {
         telemetryData[key] = value;
     }
 }
 
-void subscribeTelemetry(std::shared_ptr<Telemetry> telemetry, int clientSocket) {
-    telemetry->subscribe_position([](Telemetry::Position position) {
+//Allows latest data to be recieved in form of JSON structured string
+std::string get_data() {
+    std::lock_guard<std::mutex> lock(telemetryDataMutex);
+    return telemetryData.dump();
+}
+
+//Subscribe to Various Data inputs from MavLink
+void subscribe(std::shared_ptr<System> system){
+    if (!system) {
+        std::cerr << "System is null in subscribe function" << std::endl;
+        return;
+    }
+    std::cout << "System is valid to subscribe" << std::endl;
+
+    //Initialize Telemetry
+    telemetry = std::make_shared<Telemetry>(system);
+
+    auto position_handle = telemetry->subscribe_position([](Telemetry::Position position) {
         updateTelemetryData({
             {"relative_altitude_m", position.relative_altitude_m},
             {"latitude_deg", position.latitude_deg},
             {"longitude_deg", position.longitude_deg}
         });
     });
+    
 
     telemetry->subscribe_attitude_angular_velocity_body([](Telemetry::AngularVelocityBody angularVelocity) {
         updateTelemetryData({
@@ -46,6 +81,7 @@ void subscribeTelemetry(std::shared_ptr<Telemetry> telemetry, int clientSocket) 
             {"yaw_rad_s", angularVelocity.yaw_rad_s}
         });
     });
+
 
     telemetry->subscribe_velocity_ned([](Telemetry::VelocityNed velocity) {
         updateTelemetryData({
@@ -63,149 +99,120 @@ void subscribeTelemetry(std::shared_ptr<Telemetry> telemetry, int clientSocket) 
         });
     });
 
+
     telemetry->subscribe_imu([](Telemetry::Imu imu) {
         json imuData;
-
         imuData["acceleration_forward_m_s2"] = imu.acceleration_frd.forward_m_s2;
         imuData["angular_velocity_forward_rad_s"] = imu.angular_velocity_frd.forward_rad_s;
         imuData["magnetic_field_forward_gauss"] = imu.magnetic_field_frd.forward_gauss;
         imuData["temperature_degc"] = imu.temperature_degc;
         imuData["timestamp_us"] = imu.timestamp_us;
-
         updateTelemetryData(imuData);
     });
 
-    telemetry->subscribe_attitude_euler([clientSocket](Telemetry::EulerAngle euler_angle) {
+    telemetry->subscribe_attitude_euler([](Telemetry::EulerAngle euler_angle) {
         updateTelemetryData({
             {"roll_deg", euler_angle.roll_deg},
             {"pitch_deg", euler_angle.pitch_deg},
             {"yaw_deg", euler_angle.yaw_deg},
             {"timestamp", euler_angle.timestamp_us},
         });
-
-        if (telemetryData.contains("relative_altitude_m") &&
-            telemetryData.contains("latitude_deg") &&
-            telemetryData.contains("longitude_deg") &&
-            telemetryData.contains("roll_rad_s") &&
-            telemetryData.contains("pitch_rad_s") &&
-            telemetryData.contains("yaw_rad_s") &&
-            telemetryData.contains("north_m_s") &&
-            telemetryData.contains("east_m_s") &&
-            telemetryData.contains("down_m_s")) {
-
-            // Convert the updated telemetry data to a string to send
-            std::string message_str = telemetryData.dump() + "\n";
-
-            int length = message_str.length();
-
-            std::cout << message_str;
-
-            // Use ssize_t for the return type of send
-            ssize_t sent_length = send(clientSocket, &length, sizeof(length), 0);
-            if (sent_length == -1) {
-                perror("send length");
-                return;
-            } else if (sent_length < static_cast<ssize_t>(sizeof(length))) {
-                // Handle partial send if necessary
-                std::cerr << "Incomplete send for length" << std::endl;
-                return;
-            }
-
-            // Send the actual telemetry data as a string
-            ssize_t sent_data = send(clientSocket, message_str.c_str(), length, 0);
-            if (sent_data == -1) {
-                perror("send message");
-                return;
-            } else if (sent_data < length) {
-                // Handle partial send if necessary
-                std::cerr << "Incomplete send for message" << std::endl;
-                return;
-            }
-        }
     });
+
+    while (running) {
+        std::this_thread::sleep_for(seconds(1));
+    }
+
 }
 
+//Initialize Drone Connection via UDP Port
+int connect_drone(std::string connection_url = "udp://:14540", bool subscribeToData = true){
+    //Connects to UDP
+    std::cout << "Listening on " << connection_url << std::endl;
 
-void handle_client(int client_socket, std::shared_ptr<Telemetry> telemetry) {
-    subscribeTelemetry(telemetry, client_socket);
-
-}
-
-int main() {
-    //Create connection for MavSDK
-    Mavsdk::ComponentType componentType = Mavsdk::ComponentType::Autopilot;
-    Mavsdk::Configuration config(componentType);
-
-
-    Mavsdk mavsdk(config);
-
-    const std::string connection_url = "udp://0.0.0.0:14540";
-    ConnectionResult connection_result = mavsdk.add_any_connection(connection_url);
+    ConnectionResult connection_result = mavsdkConnect.add_any_connection(connection_url);
 
     if (connection_result != ConnectionResult::Success) {
         std::cerr << "Connection failed: " << connection_result << std::endl;
         return -1;
     }
 
-    //Connect Drone
+    //Waits for connection
     std::cout << "Waiting for drone to connect..." << std::endl;
-    auto prom = std::promise<std::shared_ptr<System>>();
-    auto fut = prom.get_future();
-    mavsdk.subscribe_on_new_system([&mavsdk, &prom]() {
-        auto system = mavsdk.systems().at(0);
+    std::promise<std::shared_ptr<System>> prom;
+    std::future<std::shared_ptr<System>> fut = prom.get_future();
 
-        if (system->has_autopilot()) {
-            std::cout << "Drone discovered!" << std::endl;
-            prom.set_value(system);
+    Mavsdk::NewSystemHandle handle = mavsdkConnect.subscribe_on_new_system([&prom, &handle]() {
+        auto systems = mavsdkConnect.systems();
+        std::cout << "Number of systems detected: " << systems.size() << std::endl;
+
+        if (!systems.empty()) {
+            auto system = systems.at(0);
+            if (system->has_autopilot()) {
+                std::cout << "Drone discovered!" << std::endl;
+                
+                prom.set_value(system);
+
+            } else {
+                std::cout << "Detected system does not have an autopilot." << std::endl;
+                prom.set_value(nullptr);
+            }
+        } else {
+            std::cout << "No systems found." << std::endl;
+            prom.set_value(nullptr);
         }
     });
 
-    if (fut.wait_for(seconds(2)) == std::future_status::timeout) {
-        std::cerr << "No drone found, exiting." << std::endl;
-        return -1;
-    }
-
-    //Initialize Telemetry
     auto system = fut.get();
-    auto telemetry = std::make_shared<Telemetry>(system);
-
-    //Create Socker Communication between Server(this) and Client(Agogos)
-    int serverSocket = socket(AF_INET, SOCK_STREAM, 0);
-    if (serverSocket == -1) {
-        std::cerr << "Failed to create socket." << std::endl;
+    if (!system) {
+        std::cerr << "Failed to connect to the drone." << std::endl;
         return -1;
     }
 
-    sockaddr_in serverAddr;
-    serverAddr.sin_family = AF_INET;
-    serverAddr.sin_port = htons(12345);
-    serverAddr.sin_addr.s_addr = INADDR_ANY;
-    if (bind(serverSocket, (struct sockaddr*)&serverAddr, sizeof(serverAddr)) == -1) {
-        std::cerr << "Failed to bind socket." << std::endl;
+    mavsdkConnect.unsubscribe_on_new_system(handle);
+
+    if (!system->is_connected()) {
+        std::cerr << "System is not connected!" << std::endl;
         return -1;
     }
+    
+    //Allows for subscription to various telemetry data
+    std::thread telemetry_thread(subscribe, system);
+    telemetry_thread.detach();
 
-    if (listen(serverSocket, 5) == -1) {
-        std::cerr << "Failed to listen on socket." << std::endl;
-        return -1;
-    }
-
-    //Server Connected
-    std::cout << "Server listening on port 12345" << std::endl;
-
-    while (true) {
-        int clientSocket = accept(serverSocket, NULL, NULL);
-        if (clientSocket == -1) {
-            std::cerr << "Failed to accept client." << std::endl;
-            continue;
-        }
-
-        std::thread([clientSocket, telemetry]() {
-            handle_client(clientSocket, telemetry);
-        }).detach();
-    }
-
-    // Cleanup
-    close(serverSocket);
     return 0;
 }
+
+//Allows exit
+void signal_callback_handler(int signum) {
+   std::cout << "Caught signal " << signum << std::endl;
+   running = false;
+   if (telemetry_thread.joinable()) {
+       telemetry_thread.join();
+   }
+}
+
+//Main Function prints out data as recieved
+int main(){
+    signal(SIGINT, signal_callback_handler);
+
+    if (connect_drone() != 0) {
+        return -1;
+    }
+
+    std::cout << "Getting Ready To Run..." << std::endl;
+    while(running){
+        std::cout << get_data() << std::endl;
+        std::this_thread::sleep_for(std::chrono::seconds(1));
+    }
+    
+    return 1;
+}
+
+// //Allow functions to be called from Python
+// PYBIND11_MODULE(telemetry_stream, m) {
+//     m.doc() = "C++ program packaged for Python, allows retrieval of latest data from simulated drone";
+
+//     m.def("connect_drone", &connect_drone, "Initialize program for Autonomous Vehicle Connection");
+//     m.def("get_data", &get_data, "Recieve latest telemetry data as string representing JSON structure");
+// }
