@@ -37,7 +37,7 @@ target_compile_features(${PROJECT_NAME} PUBLIC cxx_std_17)
 
 # Link external libraries (MAVSDK, nlohmann_json) to the C++ library
 target_link_libraries(${PROJECT_NAME} PRIVATE
-    MAVSDK::mavsdk
+    mavsdk
     nlohmann_json::nlohmann_json
 )
 

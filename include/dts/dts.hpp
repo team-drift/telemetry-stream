@@ -17,8 +17,6 @@
  * or moved to the private source file.
  */
 
-#include <mavsdk/mavsdk.h>
-#include <mavsdk/plugins/telemetry/telemetry.h>
 #include <future>
 #include <chrono>
 #include <csignal>
@@ -38,34 +36,13 @@
 
 // #include <pybind11/pybind11.h>
 
-using namespace mavsdk;
-using namespace std::chrono;
 using json = nlohmann::json;
-
-// Global Variables
-json telemetryData = json::object();
-std::mutex telemetryDataMutex;
-
-// Create Global Connection for MavSDK
-Mavsdk::ComponentType componentType = Mavsdk::ComponentType::GroundStation;
-Mavsdk::Configuration config(componentType);
-Mavsdk mavsdkConnect(config);
-
-//MavSDK's Telemetry
-std::shared_ptr<Telemetry> telemetry;
-
-std::atomic<bool> running(true);
-
-std::thread telemetry_thread;
 
 //Updates Data
 void updateTelemetryData(const json& newData);
 
 //Allows latest data to be recieved in form of JSON structured string
 std::string get_data();
-
-//Subscribe to Various Data inputs from MavLink
-void subscribe(std::shared_ptr<System> system);
 
 //Initialize Drone Connection via UDP Port
 int connect_drone(std::string connection_url = "udp://:14540", bool subscribeToData = true);

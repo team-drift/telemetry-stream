@@ -1,5 +1,6 @@
-#include <mavsdk/mavsdk.h>
-#include <mavsdk/plugins/telemetry/telemetry.h>
+// #include <mavsdk/mavsdk.h>
+#include <mavsdk.h>
+#include <plugins/telemetry/telemetry.h>
 #include <future>
 #include <chrono>
 #include <csignal>
