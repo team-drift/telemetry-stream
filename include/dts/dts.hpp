@@ -34,9 +34,13 @@
 #include <cstdlib>
 #include <unistd.h>
 
+#include <mavsdk.h>
+#include <plugins/telemetry/telemetry.h>
+
 // #include <pybind11/pybind11.h>
 
 using json = nlohmann::json;
+using namespace mavsdk;
 
 class DTStream {
 private:
@@ -44,19 +48,20 @@ private:
     /// Connection URL to utilize
     std::string connection_url = "udp://:14540";
 
+    /// MAVSDK components
+    Mavsdk::ComponentType componentType = Mavsdk::ComponentType::GroundStation;
+    Mavsdk::Configuration config;
+    Mavsdk mavsdkConnect;
+
+    /// Telemetry pointer
+    std::shared_ptr<Telemetry> telemetry;
+
+    /// Boolean determining if we are running
+    std::atomic<bool> running;
+
 public:
 
-    /**
-     * @brief Initializes callback functions
-     * 
-     * This method registers callback functions with MAVSDK
-     * that will be called each time there is data for us to process.
-     * These callbacks will then save the data to the internal structure,
-     * which can be queried later for data.
-     * 
-     * These callback functions also define the data format for incoming telemetry data.
-     */
-    void init_callbacks();
+    DTStream() : config(this->componentType), mavsdkConnect(config), running(true) {}
 
     /**
      * @brief Callback for saving telemetry data
