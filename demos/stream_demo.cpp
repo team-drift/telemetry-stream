@@ -11,6 +11,21 @@
  * We simply create a connection and read from it.
  */
 
+#include "dts/dts.hpp"
+
+/// Boolean determining if we are running
+std::atomic<bool> running(true);
+
+void signal_callback_handler(int signum)
+{
+    std::cout << "Caught signal " << signum << std::endl;
+    running = false;
+    if (telemetry_thread.joinable())
+    {
+        telemetry_thread.join();
+    }
+}
+
 int main(){
     signal(SIGINT, signal_callback_handler);
 

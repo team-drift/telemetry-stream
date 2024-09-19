@@ -38,6 +38,67 @@
 
 using json = nlohmann::json;
 
+class DTStream {
+private:
+
+    /// Connection URL to utilize
+    std::string connection_url = "udp://:14540";
+
+public:
+
+    /**
+     * @brief Initializes callback functions
+     * 
+     * This method registers callback functions with MAVSDK
+     * that will be called each time there is data for us to process.
+     * These callbacks will then save the data to the internal structure,
+     * which can be queried later for data.
+     * 
+     * These callback functions also define the data format for incoming telemetry data.
+     */
+    void init_callbacks();
+
+    /**
+     * @brief Callback for saving telemetry data
+     * 
+     * This function is called by MAVSDK when new telemetry data is available.
+     * We will add the incoming data into a data strucure (TODO)
+     * that will contain incoming telemetry data.
+     * 
+     * @param data JSON Data to add to the collection
+     */
+    void telem_callback(const json &data);
+
+    /**
+     * @brief Gets the latest telemetry packet
+     * 
+     * We retrieve the latest packet and remove it from the internal structure.
+     * We return this data as a string,
+     * so it is up to the caller to decode this data into something usable (like JSON).
+     * 
+     * @return std::string String JSON data representing the telemetry data
+     */
+    std::string get_data();
+
+    /**
+     * @brief Preforms all required start operations
+     * 
+     * This function prepares this instance for communicating
+     * with a system via MAVLINK.
+     * We preform the following:
+     * 
+     * - Create required components and structures
+     * - Connect to any added systems and determine if they are eligible
+     * - Add callback functions to react to incoming telemetry data
+     * 
+     * All these steps are REQUIRED for proper functionality,
+     * and this function MUST be called before any operations are preformed. 
+     * 
+     * @return bool true if successful, false if not
+     */
+    bool start();
+};
+
 //Updates Data
 void updateTelemetryData(const json& newData);
 

@@ -18,6 +18,8 @@
 #include <cstdlib>
 #include <unistd.h>
 
+#include "dts.h"
+
 // #include <pybind11/pybind11.h>
 
 using namespace mavsdk;
@@ -39,6 +41,81 @@ std::shared_ptr<Telemetry> telemetry;
 std::atomic<bool> running(true);
 
 std::thread telemetry_thread;
+
+void DTStream::telem_callback(const json &newData) {
+    std::lock_guard<std::mutex> lock(telemetryDataMutex);
+
+    for (auto &[key, value] : newData.items())
+    {
+        telemetryData[key] = value;
+    }
+}
+
+std::string DTStream::get_data() {
+
+}
+
+// Initialize Drone Connection via UDP Port
+bool DTStream::start()
+{
+    // Connects to UDP
+    std::cout << "Listening on " << connection_url << std::endl;
+
+    ConnectionResult connection_result = mavsdkConnect.add_any_connection(connection_url);
+
+    if (connection_result != ConnectionResult::Success)
+    {
+        std::cerr << "Connection failed: " << connection_result << std::endl;
+        return -1;
+    }
+
+    // Waits for connection
+    std::cout << "Waiting for drone to connect..." << std::endl;
+    std::promise<std::shared_ptr<System>> prom;
+    std::future<std::shared_ptr<System>> fut = prom.get_future();
+
+    Mavsdk::NewSystemHandle handle = mavsdkConnect.subscribe_on_new_system([&prom, &handle]()
+                                                                           {
+        auto systems = mavsdkConnect.systems();
+        std::cout << "Number of systems detected: " << systems.size() << std::endl;
+
+        if (!systems.empty()) {
+            auto system = systems.at(0);
+            if (system->has_autopilot()) {
+                std::cout << "Drone discovered!" << std::endl;
+                
+                prom.set_value(system);
+
+            } else {
+                std::cout << "Detected system does not have an autopilot." << std::endl;
+                prom.set_value(nullptr);
+            }
+        } else {
+            std::cout << "No systems found." << std::endl;
+            prom.set_value(nullptr);
+        } });
+
+    auto system = fut.get();
+    if (!system)
+    {
+        std::cerr << "Failed to connect to the drone." << std::endl;
+        return -1;
+    }
+
+    mavsdkConnect.unsubscribe_on_new_system(handle);
+
+    if (!system->is_connected())
+    {
+        std::cerr << "System is not connected!" << std::endl;
+        return -1;
+    }
+
+    // Allows for subscription to various telemetry data
+    std::thread telemetry_thread(subscribe, system);
+    telemetry_thread.detach();
+
+    return 0;
+}
 
 //Updates Data
 void updateTelemetryData(const json& newData) {
