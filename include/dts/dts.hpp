@@ -117,18 +117,6 @@ public:
     void stop();
 };
 
-//Updates Data
-void updateTelemetryData(const json& newData);
-
-//Allows latest data to be recieved in form of JSON structured string
-std::string get_data();
-
-//Initialize Drone Connection via UDP Port
-int connect_drone(std::string connection_url = "udp://:14540", bool subscribeToData = true);
-
-//Allows exit
-void signal_callback_handler(int signum);
-
 // //Allow functions to be called from Python
 // PYBIND11_MODULE(telemetry_stream, m) {
 //     m.doc() = "C++ program packaged for Python, allows retrieval of latest data from simulated drone";

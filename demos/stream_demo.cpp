@@ -29,13 +29,26 @@ void signal_callback_handler(int signum)
 int main(){
     signal(SIGINT, signal_callback_handler);
 
-    if (connect_drone() != 0) {
+    // Create stream instance:
+
+    DTStream dstream;
+
+    // Start the stream:
+
+    bool stat = dstream.start();
+
+    if (!stat) {
+
+        // Stream failed to start!
+
         return -1;
     }
 
+    // Preform while loop until completetion
+
     std::cout << "Getting Ready To Run..." << std::endl;
     while(running){
-        std::cout << get_data() << std::endl;
+        std::cout << dstream.get_data() << std::endl;
         std::this_thread::sleep_for(std::chrono::seconds(1));
     }
 
