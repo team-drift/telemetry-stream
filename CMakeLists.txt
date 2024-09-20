@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.25)
 
-project(dts)
+project(dts VERSION 0.0.1 DESCRIPTION "DRIFT Telemetry Stream")
 
 # Pull in external projects (nlohmann_json, MAVsdk)
 add_subdirectory(extern)
@@ -33,9 +33,15 @@ endif()
 target_compile_features(${PROJECT_NAME} PUBLIC cxx_std_17)
 
 # Link external libraries (MAVSDK, nlohmann_json) to the C++ library
-target_link_libraries(${PROJECT_NAME} PRIVATE
+target_link_libraries(${PROJECT_NAME} PUBLIC
     mavsdk
     nlohmann_json::nlohmann_json
 )
+
+# Add python bindings:
+add_subdirectory("python/")
+
+# Add demos:
+add_subdirectory("demos/")
 
 # TODO: Define python bindings and demos...

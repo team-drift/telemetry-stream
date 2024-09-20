@@ -52,16 +52,18 @@ bool DTStream::start() {
 
     ConnectionResult connection_result = mavsdkConnect.add_any_connection(connection_url);
 
-    if (connection_result != ConnectionResult::Success)
-    {
+    if (connection_result != ConnectionResult::Success) {
         std::cerr << "Connection failed: " << connection_result << std::endl;
-        return -1;
+        return false;
     }
 
     // Waits for connection
     std::cout << "Waiting for drone to connect..." << std::endl;
     std::promise<std::shared_ptr<System>> prom;
     std::future<std::shared_ptr<System>> fut = prom.get_future();
+
+    // Add new temporary callback that gets called upon system add:
+    // (Callback implemented via lambda)
 
     Mavsdk::NewSystemHandle handle = mavsdkConnect.subscribe_on_new_system([this, &prom, &handle]() {
         auto systems = mavsdkConnect.systems();
@@ -84,23 +86,27 @@ bool DTStream::start() {
         } 
     });
 
+    // Wait for system to be configured:
+
     auto system = fut.get();
-    if (!system)
-    {
+    if (!system) {
         std::cerr << "Failed to connect to the drone." << std::endl;
-        return -1;
+        return false;
     }
+
+    // Remove system callback:
 
     mavsdkConnect.unsubscribe_on_new_system(handle);
 
-    if (!system->is_connected())
-    {
+    if (!system->is_connected()) {
         std::cerr << "System is not connected!" << std::endl;
-        return -1;
+        return false;
     }
 
     // Initialize Telemetry
-    telemetry = std::make_shared<Telemetry>(system);
+    telemetry = std::make_unique<Telemetry>(system);
+
+    // Configure all callback functions
 
     auto position_handle = telemetry->subscribe_position([this](Telemetry::Position position)
                                                          { this->telem_callback({{"relative_altitude_m", position.relative_altitude_m},
@@ -140,7 +146,14 @@ bool DTStream::start() {
                                               {"timestamp", euler_angle.timestamp_us},
                                           }); });
 
-    return 0;
+    return true;
+}
+
+void DTStream::stop() {
+
+    // Destroy the MAVSDK object:
+
+    this->mavsdkConnect.~Mavsdk();
 }
 
 // //Allow functions to be called from Python

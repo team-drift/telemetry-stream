@@ -11,7 +11,7 @@
  * We simply create a connection and read from it.
  */
 
-#include "dts/dts.hpp"
+#include "dts.hpp"
 
 /// Boolean determining if we are running
 std::atomic<bool> running(true);

@@ -54,25 +54,25 @@ private:
     Mavsdk mavsdkConnect;
 
     /// Telemetry pointer
-    std::shared_ptr<Telemetry> telemetry;
+    std::unique_ptr<Telemetry> telemetry;
 
     /// Boolean determining if we are running
     std::atomic<bool> running;
 
-public:
-
-    DTStream() : config(this->componentType), mavsdkConnect(config), running(true) {}
-
     /**
      * @brief Callback for saving telemetry data
-     * 
+     *
      * This function is called by MAVSDK when new telemetry data is available.
      * We will add the incoming data into a data strucure (TODO)
      * that will contain incoming telemetry data.
-     * 
+     *
      * @param data JSON Data to add to the collection
      */
     void telem_callback(const json &data);
+
+public:
+
+    DTStream() : config(this->componentType), mavsdkConnect(config), running(true) {}
 
     /**
      * @brief Gets the latest telemetry packet
@@ -102,6 +102,19 @@ public:
      * @return bool true if successful, false if not
      */
     bool start();
+
+    /**
+     * @brief Preforms all required stop operations
+     * 
+     * This function destroys the MAVSDK object.
+     * This will ensure all resources are freed and all background threads are killed.
+     * This function will be called automatically when this object is destroyed,
+     * but it can be called automatically if necessary.
+     * 
+     * Once a telemetry object is stopped,
+     * then it CAN'T be restarted or used again!
+     */
+    void stop();
 };
 
 //Updates Data
