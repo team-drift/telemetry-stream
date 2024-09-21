@@ -17,27 +17,14 @@
  * or moved to the private source file.
  */
 
-#include <future>
-#include <chrono>
-#include <csignal>
-#include <iostream>
-#include <netinet/in.h>
-#include <signal.h>
-#include <sys/socket.h>
-#include <unistd.h>
-#include <arpa/inet.h>
-#include <thread>
-#include <atomic>
-#include <vector>
-#include <nlohmann/json.hpp>
-#include <mutex>
-#include <cstdlib>
-#include <unistd.h>
+#pragma once
+
+#include <utility>
+#include <memory>
 
 #include <mavsdk.h>
 #include <plugins/telemetry/telemetry.h>
-
-// #include <pybind11/pybind11.h>
+#include <nlohmann/json.hpp>
 
 using json = nlohmann::json;
 using namespace mavsdk;
@@ -56,9 +43,6 @@ private:
     /// Telemetry pointer
     std::unique_ptr<Telemetry> telemetry;
 
-    /// Boolean determining if we are running
-    std::atomic<bool> running;
-
     /**
      * @brief Callback for saving telemetry data
      *
@@ -72,7 +56,25 @@ private:
 
 public:
 
-    DTStream() : config(this->componentType), mavsdkConnect(config), running(true) {}
+    DTStream() : config(this->componentType), mavsdkConnect(config) {}
+
+    DTStream(std::string str) : connection_url(std::move(str)), config(this->componentType), mavsdkConnect(config) {}
+
+    /**
+     * @brief Sets the connection string
+     * 
+     * This string must be set BEFORE this class is started!
+     * 
+     * @param cstr New connection string to utilize
+     */
+    void set_cstr(std::string cstr) { this->connection_url = std::move(cstr); }
+
+    /**
+     * @brief Gets the connection string
+     * 
+     * @return const std::string& Connection string utilized
+     */
+    const std::string& get_cstr() const { return this->connection_url; }
 
     /**
      * @brief Gets the latest telemetry packet
@@ -116,11 +118,3 @@ public:
      */
     void stop();
 };
-
-// //Allow functions to be called from Python
-// PYBIND11_MODULE(telemetry_stream, m) {
-//     m.doc() = "C++ program packaged for Python, allows retrieval of latest data from simulated drone";
-
-//     m.def("connect_drone", &connect_drone, "Initialize program for Autonomous Vehicle Connection");
-//     m.def("get_data", &get_data, "Recieve latest telemetry data as string representing JSON structure");
-// }

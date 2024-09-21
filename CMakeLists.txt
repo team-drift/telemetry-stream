@@ -43,5 +43,3 @@ add_subdirectory("python/")
 
 # Add demos:
 add_subdirectory("demos/")
-
-# TODO: Define python bindings and demos...

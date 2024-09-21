@@ -15,7 +15,28 @@
 
 #include <string>
 
-#include "dts.h"
+#include <dts.hpp>
 
 namespace py = pybind11;
 
+PYBIND11_MODULE(_pdts, m) {  // NOLINT
+
+    // Define version:
+
+    m.attr("__version__") = "0.0.1";
+
+    // Define the module doc:
+
+    m.doc() = "Python wrapper for Drift Telemetry Stream";
+
+    // Create binding for DTStream class:
+
+    py::class_<DTStream>(m, "DTStream")
+        .def(py::init<std::string>())
+        .def(py::init())
+        .def("start", &DTStream::start)
+        .def("stop", &DTStream::stop)
+        .def("get_data", &DTStream::get_data)
+        .def("get_cstr", &DTStream::get_cstr)
+        .def("set_cstr", &DTStream::set_cstr);
+}

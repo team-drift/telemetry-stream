@@ -1,0 +1,6 @@
+Checks: 'bugprone-*,clang-diagnostic-*,clang-analyzer-*,modernize-*,performance-*,readability-*,google-*,cppcoreguidelines-*,misc-*,performance-*,portability-*,-modernize-use-trailing-return-type,-modernize-use-nodiscard,-bugprone-easily-swappable-parameters,-cppcoreguidelines-avoid-magic-numbers,-readability-identifier-length,-readability-magic-numbers,-cppcoreguidelines-pro-type-vararg'
+FormatStyle: 'file'
+HeaderFilterRegex: '.(hpp|cpp)$'
+CheckOptions:
+  - key: misc-non-private-member-variables-in-classes.IgnoreClassesWithAllMemberVariablesBeingPublic
+    value: '1'

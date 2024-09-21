@@ -1,5 +1,5 @@
 from __future__ import annotations
 
-from .pdts import __version__
+from ._pdts import __version__, DTStream
 
-__all__ = ["__version__"]
+__all__ = ["__version__", "DTStream"]

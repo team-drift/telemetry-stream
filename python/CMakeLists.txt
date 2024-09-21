@@ -19,14 +19,14 @@ FetchContent_MakeAvailable(pybind11)
 
 # Define a python module:
 
-pybind11_add_module(pdts MODULE pdts.cpp)
+pybind11_add_module(_pdts MODULE pdts.cpp)
 
 # Link DTS
 
 set_target_properties(dts PROPERTIES POSITION_INDEPENDENT_CODE TRUE)
 
-target_link_libraries(pdts PRIVATE dts)
+target_link_libraries(_pdts PRIVATE dts)
 
 # Install the shared library to a place we expect (required for setuptools install):
 
-install(TARGETS pdts DESTINATION dts)
+install(TARGETS _pdts DESTINATION pdts)

@@ -1,26 +1,17 @@
-// #include <mavsdk/mavsdk.h>
-#include <mavsdk.h>
-#include <plugins/telemetry/telemetry.h>
-#include <future>
-#include <chrono>
-#include <csignal>
-#include <iostream>
-#include <netinet/in.h>
-#include <signal.h>
-#include <sys/socket.h>
-#include <unistd.h>
-#include <arpa/inet.h>
-#include <thread>
-#include <atomic>
-#include <vector>
-#include <nlohmann/json.hpp>
-#include <mutex>
-#include <cstdlib>
-#include <unistd.h>
-
 #include "dts.hpp"
 
-// #include <pybind11/pybind11.h>
+#include <arpa/inet.h>
+#include <netinet/in.h>
+#include <sys/socket.h>
+
+#include <cstdlib>
+#include <future>
+#include <iostream>
+#include <mutex>
+
+#include <nlohmann/json.hpp>
+#include <mavsdk.h>
+#include <plugins/telemetry/telemetry.h>
 
 using namespace mavsdk;
 using namespace std::chrono;
@@ -33,8 +24,7 @@ std::mutex telemetryDataMutex;
 void DTStream::telem_callback(const json &newData) {
     std::lock_guard<std::mutex> lock(telemetryDataMutex);
 
-    for (auto &[key, value] : newData.items())
-    {
+    for (auto &[key, value] : newData.items()) {
         telemetryData[key] = value;
     }
 }
@@ -155,11 +145,3 @@ void DTStream::stop() {
 
     this->mavsdkConnect.~Mavsdk();
 }
-
-// //Allow functions to be called from Python
-// PYBIND11_MODULE(telemetry_stream, m) {
-//     m.doc() = "C++ program packaged for Python, allows retrieval of latest data from simulated drone";
-
-//     m.def("connect_drone", &connect_drone, "Initialize program for Autonomous Vehicle Connection");
-//     m.def("get_data", &get_data, "Recieve latest telemetry data as string representing JSON structure");
-// }
