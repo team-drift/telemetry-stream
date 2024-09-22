@@ -36,7 +36,7 @@ int main() {
 
     // Start the stream:
 
-    bool stat = dstream.start();
+    bool const stat = dstream.start();
 
     if (!stat) {
 

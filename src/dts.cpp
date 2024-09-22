@@ -1,13 +1,10 @@
 #include "dts.hpp"
 
-#include <arpa/inet.h>
-#include <netinet/in.h>
-#include <sys/socket.h>
-
-#include <cstdlib>
 #include <future>
 #include <iostream>
 #include <mutex>
+#include <string>
+#include <memory>
 
 #include <nlohmann/json.hpp>
 #include <mavsdk.h>
@@ -22,7 +19,7 @@ json telemetryData = json::object();
 std::mutex telemetryDataMutex;
 
 void DTStream::telem_callback(const json &newData) {
-    std::lock_guard<std::mutex> lock(telemetryDataMutex);
+    const std::lock_guard<std::mutex> lock(telemetryDataMutex);
 
     for (auto &[key, value] : newData.items()) {
         telemetryData[key] = value;
@@ -31,7 +28,7 @@ void DTStream::telem_callback(const json &newData) {
 
 std::string DTStream::get_data() {
 
-    std::lock_guard<std::mutex> lock(telemetryDataMutex);
+    const std::lock_guard<std::mutex> lock(telemetryDataMutex);
     return telemetryData.dump();
 }
 
@@ -57,17 +54,18 @@ bool DTStream::start() {
 
     Mavsdk::NewSystemHandle handle = mavsdkConnect.subscribe_on_new_system([this, &prom, &handle]() {
         auto systems = mavsdkConnect.systems();
-        std::cout << "Number of systems detected: " << systems.size() << std::endl;
+        std::cout << "Number of systems detected: " << systems.size() << '\n';
 
         if (!systems.empty()) {
             auto system = systems.at(0);
             if (system->has_autopilot()) {
-                std::cout << "Drone discovered!" << std::endl;
-                
+                std::cout << "Drone discovered!" << '\n';
+
                 prom.set_value(system);
 
             } else {
-                std::cout << "Detected system does not have an autopilot." << std::endl;
+                std::cout << "Detected system does not have an autopilot."
+                          << '\n';
                 prom.set_value(nullptr);
             }
         } else {
@@ -80,7 +78,7 @@ bool DTStream::start() {
 
     auto system = fut.get();
     if (!system) {
-        std::cerr << "Failed to connect to the drone." << std::endl;
+        std::cerr << "Failed to connect to the drone." << '\n';
         return false;
     }
 
@@ -89,7 +87,7 @@ bool DTStream::start() {
     mavsdkConnect.unsubscribe_on_new_system(handle);
 
     if (!system->is_connected()) {
-        std::cerr << "System is not connected!" << std::endl;
+        std::cerr << "System is not connected!" << '\n';
         return false;
     }
 
