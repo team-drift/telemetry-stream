@@ -27,7 +27,6 @@
 #include <nlohmann/json.hpp>
 
 using json = nlohmann::json;
-using namespace mavsdk;
 
 class DTStream {
 private:
@@ -35,13 +34,17 @@ private:
     /// Connection URL to utilize
     std::string connection_url = "udp://:14540";
 
-    /// MAVSDK components
-    Mavsdk::ComponentType componentType = Mavsdk::ComponentType::GroundStation;
-    Mavsdk::Configuration config;
-    Mavsdk mavsdkConnect;
+    /// Component type (we hardcode to ground station)
+    mavsdk::Mavsdk::ComponentType component_type = mavsdk::Mavsdk::ComponentType::GroundStation;
+
+    /// MAVSDK configuration instance
+    mavsdk::Mavsdk::Configuration config;
+
+    /// MAVSDK instance to utilize
+    mavsdk::Mavsdk mavsdk;
 
     /// Telemetry pointer
-    std::unique_ptr<Telemetry> telemetry;
+    std::unique_ptr<mavsdk::Telemetry> telemetry;
 
     /**
      * @brief Callback for saving telemetry data
@@ -56,9 +59,9 @@ private:
 
 public:
 
-    DTStream() : config(this->componentType), mavsdkConnect(config) {}
+    DTStream() : config(this->component_type), mavsdk(config) {}
 
-    DTStream(std::string str) : connection_url(std::move(str)), config(this->componentType), mavsdkConnect(config) {}
+    DTStream(std::string str) : connection_url(std::move(str)), config(this->component_type), mavsdk(config) {}
 
     /**
      * @brief Sets the connection string

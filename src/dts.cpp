@@ -2,16 +2,16 @@
 
 #include <future>
 #include <iostream>
+#include <memory>
 #include <mutex>
 #include <string>
-#include <memory>
 
-#include <nlohmann/json.hpp>
 #include <mavsdk.h>
 #include <plugins/telemetry/telemetry.h>
 
-using namespace mavsdk;
-using namespace std::chrono;
+#include <nlohmann/json.hpp>
+#include <nlohmann/json_fwd.hpp>
+
 using json = nlohmann::json;
 
 //--Global Variables
@@ -21,7 +21,7 @@ std::mutex telemetryDataMutex;
 void DTStream::telem_callback(const json &newData) {
     const std::lock_guard<std::mutex> lock(telemetryDataMutex);
 
-    for (auto &[key, value] : newData.items()) {
+    for (const auto &[key, value] : newData.items()) {
         telemetryData[key] = value;
     }
 }
@@ -35,25 +35,25 @@ std::string DTStream::get_data() {
 // Initialize Drone Connection via UDP Port
 bool DTStream::start() {
     // Connects to UDP
-    std::cout << "Listening on " << connection_url << std::endl;
+    std::cout << "Listening on " << connection_url << '\n';
 
-    ConnectionResult connection_result = mavsdkConnect.add_any_connection(connection_url);
+    mavsdk::ConnectionResult connection_result = mavsdk.add_any_connection(connection_url);
 
-    if (connection_result != ConnectionResult::Success) {
-        std::cerr << "Connection failed: " << connection_result << std::endl;
+    if (connection_result != mavsdk::ConnectionResult::Success) {
+        std::cerr << "Connection failed: " << connection_result << '\n';
         return false;
     }
 
     // Waits for connection
-    std::cout << "Waiting for drone to connect..." << std::endl;
-    std::promise<std::shared_ptr<System>> prom;
-    std::future<std::shared_ptr<System>> fut = prom.get_future();
+    std::cout << "Waiting for drone to connect..." << '\n';
+    std::promise<std::shared_ptr<mavsdk::System>> prom;
+    std::future<std::shared_ptr<mavsdk::System>> fut = prom.get_future();
 
     // Add new temporary callback that gets called upon system add:
     // (Callback implemented via lambda)
 
-    Mavsdk::NewSystemHandle handle = mavsdkConnect.subscribe_on_new_system([this, &prom, &handle]() {
-        auto systems = mavsdkConnect.systems();
+    mavsdk::Mavsdk::NewSystemHandle handle = mavsdk.subscribe_on_new_system([this, &prom, &handle]() {
+        auto systems = mavsdk.systems();
         std::cout << "Number of systems detected: " << systems.size() << '\n';
 
         if (!systems.empty()) {
@@ -69,7 +69,7 @@ bool DTStream::start() {
                 prom.set_value(nullptr);
             }
         } else {
-            std::cout << "No systems found." << std::endl;
+            std::cout << "No systems found." << '\n';
             prom.set_value(nullptr);
         } 
     });
@@ -84,7 +84,7 @@ bool DTStream::start() {
 
     // Remove system callback:
 
-    mavsdkConnect.unsubscribe_on_new_system(handle);
+    mavsdk.unsubscribe_on_new_system(handle);
 
     if (!system->is_connected()) {
         std::cerr << "System is not connected!" << '\n';
@@ -92,31 +92,31 @@ bool DTStream::start() {
     }
 
     // Initialize Telemetry
-    telemetry = std::make_unique<Telemetry>(system);
+    telemetry = std::make_unique<mavsdk::Telemetry>(system);
 
     // Configure all callback functions
 
-    auto position_handle = telemetry->subscribe_position([this](Telemetry::Position position)
+    auto position_handle = telemetry->subscribe_position([this](mavsdk::Telemetry::Position position)
                                                          { this->telem_callback({{"relative_altitude_m", position.relative_altitude_m},
                                                                                  {"latitude_deg", position.latitude_deg},
                                                                                  {"longitude_deg", position.longitude_deg}}); });
 
-    telemetry->subscribe_attitude_angular_velocity_body([this](Telemetry::AngularVelocityBody angularVelocity)
+    telemetry->subscribe_attitude_angular_velocity_body([this](mavsdk::Telemetry::AngularVelocityBody angularVelocity)
                                                         { this->telem_callback({{"roll_rad_s", angularVelocity.roll_rad_s},
                                                                                {"pitch_rad_s", angularVelocity.pitch_rad_s},
                                                                                {"yaw_rad_s", angularVelocity.yaw_rad_s}}); });
 
-    telemetry->subscribe_velocity_ned([this](Telemetry::VelocityNed velocity)
+    telemetry->subscribe_velocity_ned([this](mavsdk::Telemetry::VelocityNed velocity)
                                       { this->telem_callback({{"north_m_s", velocity.north_m_s},
                                                               {"east_m_s", velocity.east_m_s},
                                                               {"down_m_s", velocity.down_m_s}}); });
 
-    telemetry->subscribe_fixedwing_metrics([this](Telemetry::FixedwingMetrics metrics)
+    telemetry->subscribe_fixedwing_metrics([this](mavsdk::Telemetry::FixedwingMetrics metrics)
                                            { this->telem_callback({{"airspeed_m_s", metrics.airspeed_m_s},
                                                                    {"throttle_percentage", metrics.throttle_percentage},
                                                                    {"climb_rate_m_s", metrics.climb_rate_m_s}}); });
 
-    telemetry->subscribe_imu([this](Telemetry::Imu imu)
+    telemetry->subscribe_imu([this](mavsdk::Telemetry::Imu imu)
                              {
         json imuData;
         imuData["acceleration_forward_m_s2"] = imu.acceleration_frd.forward_m_s2;
@@ -126,7 +126,7 @@ bool DTStream::start() {
         imuData["timestamp_us"] = imu.timestamp_us;
         this->telem_callback(imuData); });
 
-    telemetry->subscribe_attitude_euler([this](Telemetry::EulerAngle euler_angle)
+    telemetry->subscribe_attitude_euler([this](mavsdk::Telemetry::EulerAngle euler_angle)
                                         { this->telem_callback({
                                               {"roll_deg", euler_angle.roll_deg},
                                               {"pitch_deg", euler_angle.pitch_deg},
@@ -141,5 +141,5 @@ void DTStream::stop() {
 
     // Destroy the MAVSDK object:
 
-    this->mavsdkConnect.~Mavsdk();
+    this->mavsdk.~Mavsdk();
 }
