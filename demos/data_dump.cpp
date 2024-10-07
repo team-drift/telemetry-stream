@@ -33,7 +33,7 @@ const std::string PATH = "out.json";
 std::atomic<bool> running(true);
 
 void signal_callback_handler(int signum) {
-    std::cout << "Caught signal " << signum << std::endl;
+    std::cout << "Caught signal " << signum << '\n';
     running = false;
 }
 

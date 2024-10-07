@@ -6,6 +6,7 @@ project(dtsdemo)
 set(MISC_FILES
     stream_demo.cpp
     data_dump.cpp
+    bench.cpp
 )
 
 # Build and link all executables:

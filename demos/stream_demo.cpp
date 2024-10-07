@@ -23,7 +23,7 @@
 std::atomic<bool> running(true);
 
 void signal_callback_handler(int signum) {
-    std::cout << "Caught signal " << signum << std::endl;
+    std::cout << "Caught signal " << signum << '\n';
     running = false;
 }
 
@@ -47,9 +47,9 @@ int main() {
 
     // Preform while loop until completetion
 
-    std::cout << "Getting Ready To Run..." << std::endl;
+    std::cout << "Getting Ready To Run..." << '\n';
     while(running) {
-        std::cout << dstream.get_data() << std::endl;
+        std::cout << dstream.get_data() << '\n';
         std::this_thread::sleep_for(std::chrono::seconds(1));
     }
 

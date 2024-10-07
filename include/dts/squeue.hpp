@@ -100,7 +100,7 @@ public:
 
         std::unique_lock<std::mutex> lock(this->mutex);
 
-        // Wait until the queue is empty, or until a timeout occurs
+        // Wait until the queue has values to return, or until a timeout occurs
         // This function also prevents waking too early,
         // the lambda ensures the queue has something in it before we consider the contents
 
@@ -131,16 +131,24 @@ public:
      */
     T pop() {
 
-        // Define a value to be retrieved from the queue:
+        // Create a lock using our mutex:
 
-        T val;
+        std::unique_lock<std::mutex> lock(this->mutex);
 
-        // Get a value from the queue, wait forever:
+        // Wait until the queue has values to return
+        // This function also prevents waking too early,
+        // the lambda ensures the queue has something in it before we consider the contents
 
-        this->pop_timeout(val, std::chrono::milliseconds::max());
+        cond.wait(lock, [this] { return !this->queue.empty(); });
 
-        // Return the value:
+        // We have the mutex! Grab the value from the queue:
 
-        return val;
+        T val = std::move(this->queue.front());
+
+        // Delete the value from the queue:
+
+        this->queue.pop();
+
+        return std::move(val);
     }
 };
