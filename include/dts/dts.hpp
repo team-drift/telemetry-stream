@@ -64,7 +64,7 @@ private:
      *
      * @param data JSON Data to add to the collection
      */
-    void telem_callback(json& data, std::size_t);
+    void telem_callback(json& data, std::size_t index);
 
 public:
 
