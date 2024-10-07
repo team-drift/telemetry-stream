@@ -110,11 +110,13 @@ public:
 
         // We have the mutex! Grab the value from the queue:
 
-        val = this->queue.front();
+        val = std::move(this->queue.front());
 
         // Delete the value from the queue:
 
         this->queue.pop();
+
+        return true;
     }
 
     /**

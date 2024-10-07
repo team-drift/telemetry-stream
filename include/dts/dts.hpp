@@ -11,10 +11,6 @@
  * This project handles the configuration and extraction process for MAVSDK.
  * The idea is to simplify the process of getting data from MAVADK,
  * and provdes a standard data format that all DRIFT projects will adhear to.
- * 
- * TODO: This file needs comments and documentation!
- * Also, I think some of these global variables can be cleaned up,
- * or moved to the private source file.
  */
 
 #pragma once
@@ -34,6 +30,18 @@ using json = nlohmann::json;
 /// Number of streams this component is tracking
 const unsigned int STREAMS = 6;
 
+/**
+ * @brief Entry point for all telemetry operations
+ * 
+ * This class represents a MAVSDK telemetry stream.
+ * We automatically configure and connect a MAVSDK instance,
+ * allowing users to retrieve telemetry data.
+ * Users can call our class methods and we will return telemetry data in JSON format.
+ * 
+ * In addition, this class also manages the process of 'merging' streams together,
+ * allowing for incoming data on alternate streams to be collected and considered as one.
+ * 
+ */
 class DTStream {
 private:
 
@@ -64,7 +72,7 @@ private:
      *
      * @param data JSON Data to add to the collection
      */
-    void telem_callback(json& data, std::size_t index);
+    void telem_callback(const json& data, std::size_t index);
 
 public:
 
