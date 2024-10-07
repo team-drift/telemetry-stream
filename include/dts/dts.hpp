@@ -21,12 +21,18 @@
 
 #include <utility>
 #include <memory>
+#include <array>
 
 #include <mavsdk.h>
 #include <plugins/telemetry/telemetry.h>
 #include <nlohmann/json.hpp>
 
+#include "squeue.hpp"
+
 using json = nlohmann::json;
+
+/// Number of streams this component is tracking
+const unsigned int STREAMS = 6;
 
 class DTStream {
 private:
@@ -46,6 +52,9 @@ private:
     /// Telemetry pointer
     std::unique_ptr<mavsdk::Telemetry> telemetry;
 
+    /// Array of queues for each stream
+    std::array<SQueue<json>, STREAMS> queues;
+
     /**
      * @brief Callback for saving telemetry data
      *
@@ -55,7 +64,7 @@ private:
      *
      * @param data JSON Data to add to the collection
      */
-    void telem_callback(const json &data);
+    void telem_callback(json& data, std::size_t);
 
 public:
 

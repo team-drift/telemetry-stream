@@ -18,15 +18,23 @@ using json = nlohmann::json;
 json telemetryData = json::object();
 std::mutex telemetryDataMutex;
 
-void DTStream::telem_callback(const json &newData) {
-    const std::lock_guard<std::mutex> lock(telemetryDataMutex);
+void DTStream::telem_callback(json &newData, std::size_t index) {
 
-    for (const auto &[key, value] : newData.items()) {
-        telemetryData[key] = value;
-    }
+    // Add the JSON data to the queue:
+
+    this->queues[index].push(newData);
 }
 
 std::string DTStream::get_data() {
+
+    // We need to get a piece of data from each queue
+
+    for (auto& q : this->queues) {
+
+        // Get value from this queue:
+
+        
+    }
 
     const std::lock_guard<std::mutex> lock(telemetryDataMutex);
     return telemetryData.dump();
