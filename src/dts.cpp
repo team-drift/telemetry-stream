@@ -15,10 +15,6 @@
 
 using json = nlohmann::json;
 
-//--Global Variables
-json telemetryData = json::object();
-std::mutex telemetryDataMutex;
-
 void DTStream::telem_callback(const json &newData, std::size_t index) {
 
     // Add the JSON data to the queue:

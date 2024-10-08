@@ -33,7 +33,7 @@ endif()
 
 # Define C++ standard:
 
-target_compile_features(${PROJECT_NAME} PUBLIC cxx_std_17)
+target_compile_features(${PROJECT_NAME} PUBLIC cxx_std_20)
 
 # Link external libraries (MAVSDK, nlohmann_json) to the C++ library
 target_link_libraries(${PROJECT_NAME} PUBLIC
