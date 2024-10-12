@@ -63,6 +63,7 @@ int main() {
     std::ofstream ofile(PATH);
 
     // Put some initial structure within it:
+    // (To ensure we have valid JSON structure)
 
     ofile << "{\"data\": [";
 
@@ -76,6 +77,7 @@ int main() {
     }
 
     // Seek to the last character to overwrite trailing comma:
+    // (Trailing commas are against the JSON spec!)
 
     ofile.seekp(static_cast<int64_t>(ofile.tellp()) - 1);
 
