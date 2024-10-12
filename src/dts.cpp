@@ -1,5 +1,6 @@
 #include "dts.hpp"
 
+#include <cstddef>
 #include <future>
 #include <iostream>
 #include <memory>
@@ -18,18 +19,31 @@ using json = nlohmann::json;
 json telemetryData = json::object();
 std::mutex telemetryDataMutex;
 
-void DTStream::telem_callback(const json &newData) {
-    const std::lock_guard<std::mutex> lock(telemetryDataMutex);
+void DTStream::telem_callback(const json &newData, std::size_t index) {
 
-    for (const auto &[key, value] : newData.items()) {
-        telemetryData[key] = value;
-    }
+    // Add the JSON data to the queue:
+
+    this->queues[index].push(newData);
 }
 
 std::string DTStream::get_data() {
 
-    const std::lock_guard<std::mutex> lock(telemetryDataMutex);
-    return telemetryData.dump();
+    // Final JSON data:
+
+    json final_data;
+
+    // We need to get a piece of data from each queue
+
+    for (std::size_t i = 0; i < this->queues.size(); ++i) {
+
+        // Get value from this queue:
+
+        final_data[i] = this->queues[i].pop();
+    }
+
+    // Return the final data:
+
+    return final_data.dump();
 }
 
 // Initialize Drone Connection via UDP Port
@@ -37,7 +51,7 @@ bool DTStream::start() {
     // Connects to UDP
     std::cout << "Listening on " << connection_url << '\n';
 
-    mavsdk::ConnectionResult connection_result = mavsdk.add_any_connection(connection_url);
+    const mavsdk::ConnectionResult connection_result = mavsdk.add_any_connection(connection_url);
 
     if (connection_result != mavsdk::ConnectionResult::Success) {
         std::cerr << "Connection failed: " << connection_result << '\n';
@@ -52,7 +66,7 @@ bool DTStream::start() {
     // Add new temporary callback that gets called upon system add:
     // (Callback implemented via lambda)
 
-    mavsdk::Mavsdk::NewSystemHandle handle = mavsdk.subscribe_on_new_system([this, &prom, &handle]() {
+    const mavsdk::Mavsdk::NewSystemHandle handle = mavsdk.subscribe_on_new_system([this, &prom]() {
         auto systems = mavsdk.systems();
         std::cout << "Number of systems detected: " << systems.size() << '\n';
 
@@ -96,25 +110,25 @@ bool DTStream::start() {
 
     // Configure all callback functions
 
-    auto position_handle = telemetry->subscribe_position([this](mavsdk::Telemetry::Position position)
+    telemetry->subscribe_position([this](mavsdk::Telemetry::Position position)
                                                          { this->telem_callback({{"relative_altitude_m", position.relative_altitude_m},
                                                                                  {"latitude_deg", position.latitude_deg},
-                                                                                 {"longitude_deg", position.longitude_deg}}); });
+                                                                                 {"longitude_deg", position.longitude_deg}}, 0); });
 
     telemetry->subscribe_attitude_angular_velocity_body([this](mavsdk::Telemetry::AngularVelocityBody angularVelocity)
                                                         { this->telem_callback({{"roll_rad_s", angularVelocity.roll_rad_s},
                                                                                {"pitch_rad_s", angularVelocity.pitch_rad_s},
-                                                                               {"yaw_rad_s", angularVelocity.yaw_rad_s}}); });
+                                                                               {"yaw_rad_s", angularVelocity.yaw_rad_s}}, 1); });
 
     telemetry->subscribe_velocity_ned([this](mavsdk::Telemetry::VelocityNed velocity)
                                       { this->telem_callback({{"north_m_s", velocity.north_m_s},
                                                               {"east_m_s", velocity.east_m_s},
-                                                              {"down_m_s", velocity.down_m_s}}); });
+                                                              {"down_m_s", velocity.down_m_s}}, 2); });
 
     telemetry->subscribe_fixedwing_metrics([this](mavsdk::Telemetry::FixedwingMetrics metrics)
                                            { this->telem_callback({{"airspeed_m_s", metrics.airspeed_m_s},
                                                                    {"throttle_percentage", metrics.throttle_percentage},
-                                                                   {"climb_rate_m_s", metrics.climb_rate_m_s}}); });
+                                                                   {"climb_rate_m_s", metrics.climb_rate_m_s}}, 3); });
 
     telemetry->subscribe_imu([this](mavsdk::Telemetry::Imu imu)
                              {
@@ -124,7 +138,7 @@ bool DTStream::start() {
         imuData["magnetic_field_forward_gauss"] = imu.magnetic_field_frd.forward_gauss;
         imuData["temperature_degc"] = imu.temperature_degc;
         imuData["timestamp_us"] = imu.timestamp_us;
-        this->telem_callback(imuData); });
+        this->telem_callback(imuData, 4); });
 
     telemetry->subscribe_attitude_euler([this](mavsdk::Telemetry::EulerAngle euler_angle)
                                         { this->telem_callback({
@@ -132,7 +146,7 @@ bool DTStream::start() {
                                               {"pitch_deg", euler_angle.pitch_deg},
                                               {"yaw_deg", euler_angle.yaw_deg},
                                               {"timestamp", euler_angle.timestamp_us},
-                                          }); });
+                                          }, 5); });
 
     return true;
 }
