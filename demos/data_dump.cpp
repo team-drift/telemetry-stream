@@ -18,11 +18,12 @@
  * It would also be nice to define what kind of data we want.
  */
 
-#include <iostream>
-#include <fstream>
-#include <string>
 #include <atomic>
 #include <csignal>
+#include <cstdint>
+#include <fstream>
+#include <iostream>
+#include <string>
 
 #include "dts.hpp"
 
@@ -61,14 +62,26 @@ int main() {
 
     std::ofstream ofile(PATH);
 
+    // Put some initial structure within it:
+
+    ofile << "{\"data\": [";
+
     // Iterate until completion:
 
     while (running) {
 
         // Output data to file:
 
-        ofile << dstream.get_data();
+        ofile << dstream.get_data() << ",";
     }
+
+    // Seek to the last character to overwrite trailing comma:
+
+    ofile.seekp(static_cast<int64_t>(ofile.tellp()) - 1);
+
+    // Finally, write the closing data:
+
+    ofile << "]}";
 
     // Close the fstream:
 
