@@ -16,6 +16,8 @@
 
 #include <cstdint>
 #include <semaphore>
+#include <mutex>
+#include <list>
 
 /**
  * @brief Represents telemetry data
@@ -140,7 +142,123 @@ struct QValue {
     /// Data to be stored in the list
     DData data;
 
+    /// Mutex to utilize for locking
+    std::mutex mutex;
+
+    /// Semaphore representing the amount of values added
     std::counting_semaphore<6> seph;
 
     QValue() : seph(0) {}
 };
+
+class DQueue {
+private:
+
+    std::list<QValue> tlist;
+
+    uint64_t count;
+
+    std::mutex mutex;
+
+public:
+
+    DQueue() =default;
+
+    void allocate() {
+
+        // Acquire the lock:
+
+        const std::lock_guard<std::mutex> lock(this->mutex);
+
+        // Emplace a value at the back of the list:
+
+        tlist.emplace_back();
+
+        // Increment the count:
+
+        ++count;
+    }
+
+    QValue& front() {
+
+        return tlist.front();
+    }
+
+    auto begin() {
+
+        return tlist.begin();
+    }
+
+    uint16_t get_count() const {
+
+        const std::lock_guard<std::mutex> lock(this->mutex);
+
+        return this->count;
+    }
+
+    void pop_front() {
+
+        // Acquire the mutex:
+
+        const std::lock_guard<std::mutex> lock(this->mutex);
+
+        // Remove the front element:
+
+        tlist.pop_front();
+    }
+};
+
+void junk() {
+
+    DQueue q;
+
+    // Define static value for keeping count:
+
+    static uint16_t count = 0;
+
+    // Determine if we need to allocate new list value:
+
+    if (count > q.get_count()) {
+        q.allocate();
+    }
+
+    static auto iter = q.begin();
+
+    // Determine if we should advance:
+
+    if (count != 0) {
+        // Increment:
+
+        ++iter;
+    }
+
+    // Alter the fields:
+
+    iter->data.adown = 0;
+    iter->data.aforward = 0;
+
+    // Release the sephamore:
+
+    iter->seph.release();
+
+    // Finally, increment the count:
+
+    ++count;
+}
+
+void get_list() {
+
+    DQueue q;
+
+    // Get the front of the queue:
+
+    q.front().seph.acquire();
+
+    // Front of the queue is good, save it:
+
+    DData val = q.front().data;
+
+    // Remove the first value:
+
+    q.pop_front();
+}

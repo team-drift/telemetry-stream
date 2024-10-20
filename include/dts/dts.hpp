@@ -24,6 +24,7 @@
 #include <nlohmann/json.hpp>
 
 #include "squeue.hpp"
+#include "struct.hpp"
 
 using json = nlohmann::json;
 
