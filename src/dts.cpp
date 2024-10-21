@@ -1,45 +1,48 @@
 #include "dts.hpp"
 
-#include <cstddef>
 #include <future>
 #include <iostream>
 #include <memory>
-#include <mutex>
-#include <string>
+#include <cstdint>
 
 #include <mavsdk.h>
+#include <connection_result.h>
 #include <plugins/telemetry/telemetry.h>
 
-#include <nlohmann/json.hpp>
-#include <nlohmann/json_fwd.hpp>
+#include "dqueue.hpp"
+#include "struct.hpp"
 
-using json = nlohmann::json;
+void DTStream::call_update(uint64_t& count, dqiter& iter) {
 
-void DTStream::telem_callback(const json &newData, std::size_t index) {
+    // Increment the count:
 
-    // Add the JSON data to the queue:
+    count++;
 
-    this->queues[index].push(newData);
-}
+    // Determine if we need to allocate new list value:
 
-std::string DTStream::get_data() {
-
-    // Final JSON data:
-
-    json final_data;
-
-    // We need to get a piece of data from each queue
-
-    for (std::size_t i = 0; i < this->queues.size(); ++i) {
-
-        // Get value from this queue:
-
-        final_data[i] = this->queues[i].pop();
+    if (count > this->dq.count()) {
+        this->dq.allocate();
     }
 
-    // Return the final data:
+    // Grab a pointer to the old data:
 
-    return final_data.dump();
+    DValue& odata = *iter;
+
+    // Increment the iterator:
+
+    ++iter;
+
+    // Release the semaphore:
+    // (We are saying we are ready for the value to be removed)
+
+    odata.latch.count_down();
+}
+
+DTData DTStream::get_data() {
+
+    // Get and return the data from the queue:
+
+    return dq.get_data();
 }
 
 // Initialize Drone Connection via UDP Port
@@ -106,43 +109,148 @@ bool DTStream::start() {
 
     // Configure all callback functions
 
-    telemetry->subscribe_position([this](mavsdk::Telemetry::Position position)
-                                                         { this->telem_callback({{"relative_altitude_m", position.relative_altitude_m},
-                                                                                 {"latitude_deg", position.latitude_deg},
-                                                                                 {"longitude_deg", position.longitude_deg}}, 0); });
+    telemetry->subscribe_position([this](mavsdk::Telemetry::Position position) {
 
-    telemetry->subscribe_attitude_angular_velocity_body([this](mavsdk::Telemetry::AngularVelocityBody angularVelocity)
-                                                        { this->telem_callback({{"roll_rad_s", angularVelocity.roll_rad_s},
-                                                                               {"pitch_rad_s", angularVelocity.pitch_rad_s},
-                                                                               {"yaw_rad_s", angularVelocity.yaw_rad_s}}, 1); });
+        // Static variable for keeping count:
 
-    telemetry->subscribe_velocity_ned([this](mavsdk::Telemetry::VelocityNed velocity)
-                                      { this->telem_callback({{"north_m_s", velocity.north_m_s},
-                                                              {"east_m_s", velocity.east_m_s},
-                                                              {"down_m_s", velocity.down_m_s}}, 2); });
+        static uint64_t count = 1;
 
-    telemetry->subscribe_fixedwing_metrics([this](mavsdk::Telemetry::FixedwingMetrics metrics)
-                                           { this->telem_callback({{"airspeed_m_s", metrics.airspeed_m_s},
-                                                                   {"throttle_percentage", metrics.throttle_percentage},
-                                                                   {"climb_rate_m_s", metrics.climb_rate_m_s}}, 3); });
+        // Define the iterator to utilize:
 
-    telemetry->subscribe_imu([this](mavsdk::Telemetry::Imu imu)
-                             {
-        json imuData;
-        imuData["acceleration_forward_m_s2"] = imu.acceleration_frd.forward_m_s2;
-        imuData["angular_velocity_forward_rad_s"] = imu.angular_velocity_frd.forward_rad_s;
-        imuData["magnetic_field_forward_gauss"] = imu.magnetic_field_frd.forward_gauss;
-        imuData["temperature_degc"] = imu.temperature_degc;
-        imuData["timestamp_us"] = imu.timestamp_us;
-        this->telem_callback(imuData, 4); });
+        static auto iter = this->dq.begin();
 
-    telemetry->subscribe_attitude_euler([this](mavsdk::Telemetry::EulerAngle euler_angle)
-                                        { this->telem_callback({
-                                              {"roll_deg", euler_angle.roll_deg},
-                                              {"pitch_deg", euler_angle.pitch_deg},
-                                              {"yaw_deg", euler_angle.yaw_deg},
-                                              {"timestamp", euler_angle.timestamp_us},
-                                          }, 5); });
+        // Operate upon the data:
+
+        iter->data.latitude = position.latitude_deg;
+        iter->data.longitude = position.longitude_deg;
+        iter->data.altitude = position.relative_altitude_m;
+
+        // Alter the queue state:
+
+        this->call_update(count, iter);
+    });
+
+    telemetry->subscribe_attitude_angular_velocity_body(
+        [this](mavsdk::Telemetry::AngularVelocityBody angularVelocity) {
+
+            // Static variable for keeping count:
+
+            static uint64_t count = 1;
+
+            // Define iterator to utilize:
+
+            static auto iter = this->dq.begin();
+
+            // Operate upon the data:
+
+            iter->data.vroll = angularVelocity.roll_rad_s;
+            iter->data.vpitch = angularVelocity.pitch_rad_s;
+            iter->data.vyaw = angularVelocity.yaw_rad_s;
+
+            // Alter queue state:
+
+            this->call_update(count, iter);
+        });
+
+    telemetry->subscribe_velocity_ned(
+        [this](mavsdk::Telemetry::VelocityNed velocity) {
+
+            // Static variable for keeping count:
+
+            static uint64_t count = 1;
+
+            // Define iterator to utilize:
+
+            static auto iter = this->dq.begin();
+
+            // Operate upon the data:
+
+            iter->data.vnorth = velocity.north_m_s;
+            iter->data.veast = velocity.east_m_s;
+            iter->data.vdown = velocity.down_m_s;
+
+            // Alter queue state:
+
+            this->call_update(count, iter);
+        });
+
+    telemetry->subscribe_fixedwing_metrics(
+        [this](mavsdk::Telemetry::FixedwingMetrics metrics) {
+
+            // Static variable for keeping count:
+
+            static uint64_t count = 1;
+
+            // Define iterator to utilize:
+
+            static auto iter = this->dq.begin();
+
+            // Operate upon the data:
+
+            iter->data.airspeed = metrics.airspeed_m_s;
+            iter->data.throttle_per = metrics.throttle_percentage;
+            iter->data.climb_rate = metrics.climb_rate_m_s;
+
+            // Alter queue state:
+
+            this->call_update(count, iter);
+        });
+
+    telemetry->subscribe_imu([this](mavsdk::Telemetry::Imu imu) {
+
+        // Static variable for keeping count:
+
+        static uint64_t count = 1;
+
+        // Define iterator to utilize:
+
+        static auto iter = this->dq.begin();
+
+        // Operate upon the data:
+
+        iter->data.aforward = imu.acceleration_frd.forward_m_s2;
+        iter->data.aright = imu.acceleration_frd.right_m_s2;
+        iter->data.adown = imu.acceleration_frd.down_m_s2;
+
+        iter->data.avforward = imu.angular_velocity_frd.forward_rad_s;
+        iter->data.avright = imu.angular_velocity_frd.right_rad_s;
+        iter->data.avdown = imu.angular_velocity_frd.down_rad_s;
+
+        iter->data.gforward = imu.magnetic_field_frd.forward_gauss;
+        iter->data.gright = imu.magnetic_field_frd.right_gauss;
+        iter->data.gdown = imu.magnetic_field_frd.down_gauss;
+
+        iter->data.temp = imu.temperature_degc;
+        iter->data.time = imu.timestamp_us;
+
+        // Alter queue state:
+
+        this->call_update(count, iter);
+    });
+
+    telemetry->subscribe_attitude_euler(
+        [this](mavsdk::Telemetry::EulerAngle euler_angle) {
+
+            // Static variable for keeping count:
+
+            static uint64_t count = 1;
+
+            // Define iterator to utilize:
+
+            static auto iter = this->dq.begin();
+
+            // Operate upon the data:
+
+            iter->data.roll = euler_angle.roll_deg;
+            iter->data.pitch = euler_angle.pitch_deg;
+            iter->data.yaw = euler_angle.yaw_deg;
+
+            // TODO: This also provides a timestamp
+
+            // Alter queue state:
+
+            this->call_update(count, iter);
+        });
 
     return true;
 }

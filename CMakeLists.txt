@@ -12,6 +12,8 @@ add_subdirectory(extern)
 
 add_library(${PROJECT_NAME}
     src/dts.cpp
+    src/dqueue.cpp
+    src/struct.cpp
 )
 
 target_include_directories(${PROJECT_NAME}

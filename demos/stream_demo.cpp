@@ -49,7 +49,7 @@ int main() {
 
     std::cout << "Getting Ready To Run..." << '\n';
     while(running) {
-        std::cout << dstream.get_data() << '\n';
+        std::cout << dstream.get_data().to_json().dump() << '\n';
         std::this_thread::sleep_for(std::chrono::seconds(1));
     }
 

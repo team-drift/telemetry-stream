@@ -8,8 +8,7 @@
  * @copyright Copyright (c) 2024
  * 
  * This file describes some structures that are used throughout this project.
- * We define the final structure that is returned to the user,
- * as well as the structure that represents a value in the queue.
+ * We define the final structure that is returned to the user.
  */
 
 #pragma once
@@ -18,247 +17,174 @@
 #include <semaphore>
 #include <mutex>
 #include <list>
+#include <iostream>
+
+#include <nlohmann/json.hpp>
+
+using json = nlohmann::json;
 
 /**
- * @brief Represents telemetry data
+ * @brief Struct containing telemetry data
  * 
- * This struct contains all the necessary info required
- * for tracking a drone in flight.
+ * This struct contains all the fields that are tracked by DTS.
+ * All the incoming data streams are merged into this struct,
+ * which can then be read and manipulated by higher level components.
  * 
+ * All units are defined in the documentation, and each section
+ * uses the same units.
+ * 
+ * We contain the following sections:
+ * 
+ * Global Position Info - Latitude, Longitude, and Relative Altitude
+ * Axis Velocity - Velocity in each axis (north, east, up) in meters per second
+ * Axis Acceleration - Acceleration in each axis (forward, right, down) in meters per second^2
+ * Angular Velocity - Angular velocity in each axis in radians per second
+ * Magnetic Fields - Magnetic field readings in each axis in Gauss
+ * Euler Angles - Rotations in each rotation axis (roll, pitch, yaw) in degrees
+ * Euler Angle Velocity - Velocity in each rotation axis in radians
+ * Other Values - Values that do not fall within specific catagories
+ * 
+ * TODO:
+ * 
+ * Change axis names from forward, right, down to normal north, east, up?
+ * Standardize rotation values, such as all degrees to radians and vice a versa?
+ * Better methods for converting to-and-from formats?
  */
-struct DData {
+struct DTData {
 
     /// Current timestamp in microseconds
-    uint64_t time;
+    uint64_t time = 0;
 
     ///
     // Global Position Info
     ///
 
     /// Latitude in degrees
-    double latitude;
+    double latitude = 0;
 
     /// Longitude in degrees
-    double longitude;
+    double longitude = 0;
+
+    /// Relative altitude from the base station in meters
+    float altitude = 0;
 
     ///
     // Axis Velocity
     ///
 
     /// Velocity in north axis in meters per second
-    float snorth;
+    float vnorth = 0;
 
     /// Velocity in east axis in meters per second
-    float seast;
+    float veast = 0;
 
     /// Velocity in down axis in meters per second
-    float sdown;
+    float vdown = 0;
 
     /// Current airspeed in meters per second
-    float airspeed;
+    float airspeed = 0;
 
     /// Current climb rate in meters per second
-    float climb_rate;
+    float climb_rate = 0;
 
     ///
     // Axis Acceleration
     ///
 
     /// Acceleration in forward axis in meters per second^2
-    float aforward;
+    float aforward = 0;
 
     /// Acceleration in right axis in meters per second^2
-    float aright;
+    float aright = 0;
 
     /// Acceleration in down axis in meters per second^2
-    float adown;
+    float adown = 0;
 
     ///
     // Angular Velocity
     ///
 
     /// Angular velocity in forward axis in radians per second
-    float avforward;
+    float avforward = 0;
 
     /// Angular velocity in right axis in radians per second
-    float avright;
+    float avright = 0;
 
     /// Angular velocity in down axis in radians per second
-    float avdown;
+    float avdown = 0;
 
     ///
     // Magnetic Field
     ///
 
     /// Magnetic filed in forward axis in Gauss
-    float gforward;
+    float gforward = 0;
 
     /// Magnetic field in right axis in Gauss
-    float gright;
+    float gright = 0;
 
     /// Magnetic field in down axis in Gauss
-    float gdown;
+    float gdown = 0;
 
     ///
     // Euler Angles
     ///
 
     /// Roll angle in degrees
-    float roll;
+    float roll = 0;
 
     /// Pitch angle in degrees
-    float pitch;
+    float pitch = 0;
 
     /// Yaw angle in degrees
-    float yaw;
+    float yaw = 0;
 
     ///
     // Euler Angle Velocity
     ///
 
-    /// Roll speed in radians per second
-    float sroll;
+    /// Roll velocity in radians per second
+    float vroll = 0;
 
-    /// Pitch speed in radians per second
-    float spitch;
+    /// Pitch velocity in radians per second
+    float vpitch = 0;
 
-    /// Yaw speed in radians per second
-    float syaw;
+    /// Yaw velocity in radians per second
+    float vyaw = 0;
 
     ///
     // Other Values
     ///
 
     /// Temperature in celsius
-    float temp;
+    float temp = 0;
 
     /// Current throttle setting percentage, 0-100
-    float throttle_per;
+    float throttle_per = 0;
 
+    /**
+     * @brief Converts to JSON data
+     *
+     * This function coverts the data within this struct
+     * into a JSON instance
+     * (provided by nlohmann JSON library).
+     * 
+     * This instance can then be converted into a string or used directly.
+     *
+     * @return json JSON instance of the data within this class
+     */
+    json to_json() const;
 };
 
-struct QValue {
-
-    /// Data to be stored in the list
-    DData data;
-
-    /// Mutex to utilize for locking
-    std::mutex mutex;
-
-    /// Semaphore representing the amount of values added
-    std::counting_semaphore<6> seph;
-
-    QValue() : seph(0) {}
-};
-
-class DQueue {
-private:
-
-    std::list<QValue> tlist;
-
-    uint64_t count;
-
-    std::mutex mutex;
-
-public:
-
-    DQueue() =default;
-
-    void allocate() {
-
-        // Acquire the lock:
-
-        const std::lock_guard<std::mutex> lock(this->mutex);
-
-        // Emplace a value at the back of the list:
-
-        tlist.emplace_back();
-
-        // Increment the count:
-
-        ++count;
-    }
-
-    QValue& front() {
-
-        return tlist.front();
-    }
-
-    auto begin() {
-
-        return tlist.begin();
-    }
-
-    uint16_t get_count() const {
-
-        const std::lock_guard<std::mutex> lock(this->mutex);
-
-        return this->count;
-    }
-
-    void pop_front() {
-
-        // Acquire the mutex:
-
-        const std::lock_guard<std::mutex> lock(this->mutex);
-
-        // Remove the front element:
-
-        tlist.pop_front();
-    }
-};
-
-void junk() {
-
-    DQueue q;
-
-    // Define static value for keeping count:
-
-    static uint16_t count = 0;
-
-    // Determine if we need to allocate new list value:
-
-    if (count > q.get_count()) {
-        q.allocate();
-    }
-
-    static auto iter = q.begin();
-
-    // Determine if we should advance:
-
-    if (count != 0) {
-        // Increment:
-
-        ++iter;
-    }
-
-    // Alter the fields:
-
-    iter->data.adown = 0;
-    iter->data.aforward = 0;
-
-    // Release the sephamore:
-
-    iter->seph.release();
-
-    // Finally, increment the count:
-
-    ++count;
-}
-
-void get_list() {
-
-    DQueue q;
-
-    // Get the front of the queue:
-
-    q.front().seph.acquire();
-
-    // Front of the queue is good, save it:
-
-    DData val = q.front().data;
-
-    // Remove the first value:
-
-    q.pop_front();
-}
+/**
+ * @brief Pretty prints data to an output stream
+ *
+ * This function will pretty-print the data in this class
+ * to the provided ostream.
+ * This data will NOT be easily worked with by computers,
+ * and is instead intended for human consumption.
+ *
+ * @param output Output stream
+ * @return std::ostream&
+ */
+std::ostream& operator<<(std::ostream& output, DTData const& dt);

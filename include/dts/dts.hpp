@@ -17,14 +17,13 @@
 
 #include <utility>
 #include <memory>
-#include <array>
 
 #include <mavsdk.h>
 #include <plugins/telemetry/telemetry.h>
 #include <nlohmann/json.hpp>
 
-#include "squeue.hpp"
 #include "struct.hpp"
+#include "dqueue.hpp"
 
 using json = nlohmann::json;
 
@@ -61,19 +60,26 @@ private:
     /// Telemetry pointer
     std::unique_ptr<mavsdk::Telemetry> telemetry;
 
-    /// Array of queues for each stream
-    std::array<SQueue<json>, STREAMS> queues;
-
     /**
-     * @brief Callback for saving telemetry data
+     * @brief Updates the count and iter values for a callback
      *
-     * This function is called by MAVSDK when new telemetry data is available.
-     * We will add the incoming data into a data strucure (TODO)
-     * that will contain incoming telemetry data.
+     * Each stream callback maintains a count
+     * (how many values have been added to the queue)
+     * and an iterator
+     * (read/write access to a particular value in the queue).
      *
-     * @param data JSON Data to add to the collection
+     * This function updates each of these things,
+     * along with altering the queue size if necessary.
+     * We also handle the semaphore state so other components
+     * can identify when a value is ready to be removed.
+     * 
+     * Callbacks should invoke this function AFTER alterations are complete.
+     * Doing so before can lead to skipping and weird queue states!
+     *
+     * @param count Current count of the callback
+     * @param iter Current iterator of the callback
      */
-    void telem_callback(const json& data, std::size_t index);
+    void call_update(uint64_t& count, dqiter& iter);
 
 public:
 
@@ -82,6 +88,9 @@ public:
     DTStream(std::string str) : connection_url(std::move(str)), config(this->component_type), mavsdk(config) {}
 
     ~DTStream() { this->stop(); }
+
+    /// Special drift queue, blah blah blah
+    DQueue dq;
 
     /**
      * @brief Sets the connection string
@@ -103,12 +112,11 @@ public:
      * @brief Gets the latest telemetry packet
      * 
      * We retrieve the latest packet and remove it from the internal structure.
-     * We return this data as a string,
-     * so it is up to the caller to decode this data into something usable (like JSON).
+     * We utilize the DTData struct to represent the telemetry data.
      * 
-     * @return std::string String JSON data representing the telemetry data
+     * @return DTData Struct containing telemetry data 
      */
-    std::string get_data();
+    DTData get_data();
 
     /**
      * @brief Preforms all required start operations
