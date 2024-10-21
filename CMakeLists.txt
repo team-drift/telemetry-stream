@@ -5,6 +5,9 @@ project(dts VERSION 0.0.1 DESCRIPTION "DRIFT Telemetry Stream")
 # Only build static libraries
 option(BUILD_SHARED_LIBS "Build using shared libraries" OFF)
 
+# Disable MAVSDK testing
+option(BUILD_TESTING "Build tests" OFF)
+
 # Pull in external projects (nlohmann_json, MAVsdk)
 add_subdirectory(extern)
 
