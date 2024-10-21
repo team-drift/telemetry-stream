@@ -46,8 +46,6 @@ DTData DQueue::get_data() {
 
     // Acquire the semaphore at the front:
 
-    std::cout << "Waiting sep..." << "\n";
-
     list.begin()->latch.wait();
 
     // The semaphore is acquired, we can get data:

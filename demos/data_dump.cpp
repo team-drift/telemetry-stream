@@ -73,7 +73,7 @@ int main() {
 
         // Output data to file:
 
-        ofile << dstream.get_data() << ",";
+        ofile << dstream.get_data().to_json().dump() << ",";
     }
 
     // Seek to the last character to overwrite trailing comma:
