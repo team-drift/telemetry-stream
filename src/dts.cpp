@@ -4,6 +4,7 @@
 #include <iostream>
 #include <memory>
 #include <cstdint>
+#include <chrono>
 
 #include <mavsdk.h>
 #include <connection_result.h>
@@ -32,7 +33,7 @@ void DTStream::call_update(uint64_t& count, dqiter& iter) {
 
     ++iter;
 
-    // Release the semaphore:
+    // Release the latch:
     // (We are saying we are ready for the value to be removed)
 
     odata.latch.count_down();
@@ -125,6 +126,8 @@ bool DTStream::start() {
         iter->data.longitude = position.longitude_deg;
         iter->data.altitude = position.relative_altitude_m;
 
+        iter->data.position_time = std::chrono::high_resolution_clock::now();
+
         // Alter the queue state:
 
         this->call_update(count, iter);
@@ -146,6 +149,9 @@ bool DTStream::start() {
             iter->data.vroll = angularVelocity.roll_rad_s;
             iter->data.vpitch = angularVelocity.pitch_rad_s;
             iter->data.vyaw = angularVelocity.yaw_rad_s;
+
+            iter->data.veuler_time =
+                std::chrono::high_resolution_clock::now();
 
             // Alter queue state:
 
@@ -169,6 +175,9 @@ bool DTStream::start() {
             iter->data.veast = velocity.east_m_s;
             iter->data.vdown = velocity.down_m_s;
 
+            iter->data.vaxis_time =
+                std::chrono::high_resolution_clock::now();
+
             // Alter queue state:
 
             this->call_update(count, iter);
@@ -190,6 +199,9 @@ bool DTStream::start() {
             iter->data.airspeed = metrics.airspeed_m_s;
             iter->data.throttle_per = metrics.throttle_percentage;
             iter->data.climb_rate = metrics.climb_rate_m_s;
+
+            iter->data.airspeed_time =
+                std::chrono::high_resolution_clock::now();
 
             // Alter queue state:
 
@@ -223,6 +235,13 @@ bool DTStream::start() {
         iter->data.temp = imu.temperature_degc;
         iter->data.time = imu.timestamp_us;
 
+        auto time = iter->data.position_time =
+            std::chrono::high_resolution_clock::now();
+
+        iter->data.aaxis_time = time;
+        iter->data.vangular_time = time;
+        iter->data.mag_time = time;
+
         // Alter queue state:
 
         this->call_update(count, iter);
@@ -244,6 +263,9 @@ bool DTStream::start() {
             iter->data.roll = euler_angle.roll_deg;
             iter->data.pitch = euler_angle.pitch_deg;
             iter->data.yaw = euler_angle.yaw_deg;
+
+            iter->data.euler_time =
+                std::chrono::high_resolution_clock::now();
 
             // TODO: This also provides a timestamp
 

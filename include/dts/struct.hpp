@@ -18,10 +18,14 @@
 #include <mutex>
 #include <list>
 #include <iostream>
+#include <chrono>
 
 #include <nlohmann/json.hpp>
 
 using json = nlohmann::json;
+
+/// Number of streams this component is tracking
+const unsigned int STREAMS = 6;
 
 /**
  * @brief Struct containing telemetry data
@@ -38,6 +42,7 @@ using json = nlohmann::json;
  * Global Position Info - Latitude, Longitude, and Relative Altitude
  * Axis Velocity - Velocity in each axis (north, east, up) in meters per second
  * Axis Acceleration - Acceleration in each axis (forward, right, down) in meters per second^2
+ * Airspeed Metrics - Airspeed and climb-rate
  * Angular Velocity - Angular velocity in each axis in radians per second
  * Magnetic Fields - Magnetic field readings in each axis in Gauss
  * Euler Angles - Rotations in each rotation axis (roll, pitch, yaw) in degrees
@@ -68,6 +73,9 @@ struct DTData {
     /// Relative altitude from the base station in meters
     float altitude = 0;
 
+    /// Time the global position data was added to struct
+    std::chrono::time_point<std::chrono::high_resolution_clock> position_time;
+
     ///
     // Axis Velocity
     ///
@@ -81,11 +89,24 @@ struct DTData {
     /// Velocity in down axis in meters per second
     float vdown = 0;
 
+    /// Time the velocity axis data was added to struct
+    std::chrono::time_point<std::chrono::high_resolution_clock> vaxis_time;
+
+    ///
+    // Airspeed Metrics
+    ///
+
     /// Current airspeed in meters per second
     float airspeed = 0;
 
     /// Current climb rate in meters per second
     float climb_rate = 0;
+
+    /// Current throttle setting percentage, 0-100
+    float throttle_per = 0;
+
+    /// Time the airspeed data was added to struct
+    std::chrono::time_point<std::chrono::high_resolution_clock> airspeed_time;
 
     ///
     // Axis Acceleration
@@ -100,6 +121,9 @@ struct DTData {
     /// Acceleration in down axis in meters per second^2
     float adown = 0;
 
+    /// Time the axis acceleration axis data was added to struct
+    std::chrono::time_point<std::chrono::high_resolution_clock> aaxis_time;
+
     ///
     // Angular Velocity
     ///
@@ -112,6 +136,9 @@ struct DTData {
 
     /// Angular velocity in down axis in radians per second
     float avdown = 0;
+
+    /// Time the angular velocity data was added to struct
+    std::chrono::time_point<std::chrono::high_resolution_clock> vangular_time;
 
     ///
     // Magnetic Field
@@ -126,6 +153,9 @@ struct DTData {
     /// Magnetic field in down axis in Gauss
     float gdown = 0;
 
+    /// Time the magnetic field data was added to struct
+    std::chrono::time_point<std::chrono::high_resolution_clock> mag_time;
+
     ///
     // Euler Angles
     ///
@@ -138,6 +168,9 @@ struct DTData {
 
     /// Yaw angle in degrees
     float yaw = 0;
+
+    /// Time the euler anglers data was added to struct
+    std::chrono::time_point<std::chrono::high_resolution_clock> euler_time;
 
     ///
     // Euler Angle Velocity
@@ -152,15 +185,15 @@ struct DTData {
     /// Yaw velocity in radians per second
     float vyaw = 0;
 
+    /// Time the euler angle velocity data was added to struct
+    std::chrono::time_point<std::chrono::high_resolution_clock> veuler_time;
+
     ///
     // Other Values
     ///
 
     /// Temperature in celsius
     float temp = 0;
-
-    /// Current throttle setting percentage, 0-100
-    float throttle_per = 0;
 
     /**
      * @brief Converts to JSON data

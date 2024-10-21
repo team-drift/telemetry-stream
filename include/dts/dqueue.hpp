@@ -46,7 +46,7 @@ struct DValue {
     /// Latch representing the amount of values added
     std::latch latch;
 
-    DValue() : latch(6) {}
+    DValue() : latch(STREAMS) {}
 };
 
 /**

@@ -27,9 +27,6 @@
 
 using json = nlohmann::json;
 
-/// Number of streams this component is tracking
-const unsigned int STREAMS = 6;
-
 /**
  * @brief Entry point for all telemetry operations
  * 

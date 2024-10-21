@@ -12,7 +12,6 @@
 #include "dqueue.hpp"
 
 #include <mutex>
-#include <iostream>
 
 #include "struct.hpp"
 
