@@ -134,8 +134,14 @@ bool DTStream::start() {
                              {
         json imuData;
         imuData["acceleration_forward_m_s2"] = imu.acceleration_frd.forward_m_s2;
+        imuData["acceleration_right_m_s2"] = imu.acceleration_frd.right_m_s2;
+        imuData["acceleration_down_m_s2"] = imu.acceleration_frd.down_m_s2;
         imuData["angular_velocity_forward_rad_s"] = imu.angular_velocity_frd.forward_rad_s;
+        imuData["angular_velocity_right_rad_s"] = imu.angular_velocity_frd.right_rad_s;
+        imuData["angular_velocity_down_rad_s"] = imu.angular_velocity_frd.down_rad_s;
         imuData["magnetic_field_forward_gauss"] = imu.magnetic_field_frd.forward_gauss;
+        imuData["magnetic_field_right_gauss"] = imu.magnetic_field_frd.right_gauss;
+        imuData["magnetic_field_down_gauss"] = imu.magnetic_field_frd.down_gauss;
         imuData["temperature_degc"] = imu.temperature_degc;
         imuData["timestamp_us"] = imu.timestamp_us;
         this->telem_callback(imuData, 4); });
