@@ -19,7 +19,7 @@ void DQueue::allocate() {
 
     // Acquire the lock:
 
-    const std::lock_guard<std::mutex> lock(this->mutex);
+    // const std::lock_guard<std::mutex> lock(this->mutex);
 
     // Emplace a value at the back of the list:
 
@@ -34,7 +34,7 @@ void DQueue::pop_front() {
 
     // Acquire the mutex:
 
-    const std::lock_guard<std::mutex> lock(this->mutex);
+    // const std::lock_guard<std::mutex> lock(this->mutex);
 
     // Remove the front element:
 
@@ -43,7 +43,7 @@ void DQueue::pop_front() {
 
 DTData DQueue::get_data() {
 
-    // Acquire the semaphore at the front:
+    // Acquire the latch at the front:
 
     list.begin()->latch.wait();
 
