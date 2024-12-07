@@ -4,20 +4,16 @@
 #include <future>
 #include <iostream>
 #include <memory>
-#include <mutex>
 #include <string>
 
 #include <mavsdk.h>
+#include <connection_result.h>
 #include <plugins/telemetry/telemetry.h>
 
 #include <nlohmann/json.hpp>
 #include <nlohmann/json_fwd.hpp>
 
 using json = nlohmann::json;
-
-//--Global Variables
-json telemetryData = json::object();
-std::mutex telemetryDataMutex;
 
 void DTStream::telem_callback(const json &newData, std::size_t index) {
 
