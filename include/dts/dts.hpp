@@ -83,9 +83,9 @@ public:
 
     ~DTStream() { this->stop(); }
 
-    DTStream(DTStream&) = default;
+    DTStream(DTStream&) = delete;
 
-    DTStream(DTStream&&) = default;
+    DTStream(DTStream&&) = delete;
 
     DTStream& operator=(const DTStream&) = delete;
 
