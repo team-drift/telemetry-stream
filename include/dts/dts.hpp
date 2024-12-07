@@ -78,7 +78,8 @@ public:
 
     DTStream() : config(this->component_type), mavsdk(config) {}
 
-    DTStream(std::string str) : connection_url(std::move(str)), config(this->component_type), mavsdk(config) {}
+    DTStream(const std::string& str) : connection_url(str), config(this->component_type), mavsdk(config) {}
+    DTStream(std::string&& str) : connection_url(std::move(str)), config(this->component_type), mavsdk(config) {}
 
     ~DTStream() { this->stop(); }
 

@@ -15,6 +15,7 @@
 
 #include <chrono>
 #include <iostream>
+#include <ratio>
 
 /// Number of values to retrieve
 const int NUM = 500;
