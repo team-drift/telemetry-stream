@@ -34,7 +34,7 @@ std::string DTStream::get_data() {
 
         // Get value from this queue:
 
-        final_data[i] = this->queues[i].pop();
+        final_data.update(this->queues[i].pop());
     }
 
     // Return the final data:

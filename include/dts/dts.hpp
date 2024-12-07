@@ -83,6 +83,14 @@ public:
 
     ~DTStream() { this->stop(); }
 
+    DTStream(DTStream&) = default;
+
+    DTStream(DTStream&&) = default;
+
+    DTStream& operator=(const DTStream&) = delete;
+
+    DTStream& operator=(DTStream&&) = delete;
+
     /**
      * @brief Sets the connection string
      * 
