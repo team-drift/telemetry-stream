@@ -23,7 +23,7 @@ PYBIND11_MODULE(_pdts, m) {  // NOLINT
 
     // Define version:
 
-    m.attr("__version__") = "0.0.1";
+    m.attr("__version__") = "0.0.3";
 
     // Define the module doc:
 
@@ -38,5 +38,7 @@ PYBIND11_MODULE(_pdts, m) {  // NOLINT
         .def("stop", &DTStream::stop)
         .def("get_data", &DTStream::get_data)
         .def("get_cstr", &DTStream::get_cstr)
-        .def("set_cstr", &DTStream::set_cstr);
+        .def("set_cstr", &DTStream::set_cstr)
+        .def("get_drop_rate", &DTStream::get_drop_rate)
+        .def("set_drop_rate", &DTStream::set_drop_rate);
 }

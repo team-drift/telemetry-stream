@@ -33,6 +33,8 @@ int main() {
 
     DTStream dstream;
 
+    dstream.set_drop_rate(0);
+
     // Start the stream:
 
     const bool stat = dstream.start();

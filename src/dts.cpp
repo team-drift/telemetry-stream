@@ -17,9 +17,18 @@ using json = nlohmann::json;
 
 void DTStream::telem_callback(const json &newData, std::size_t index) {
 
-    // Add the JSON data to the queue:
+    // Determine the drop rate for this value:
 
-    this->queues[index].push(newData);
+    this->drops[index] = ++(this->drops[index]) % this->drop_rate;
+
+    // Are we free to accept this packet:
+
+    if (this->drops[index] == 0) {
+
+        // Add the JSON data to the queue:
+
+        this->queues[index].push(newData);
+    }
 }
 
 std::string DTStream::get_data() {

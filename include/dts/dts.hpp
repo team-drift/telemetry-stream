@@ -41,6 +41,12 @@ const unsigned int STREAMS = 6;
  * In addition, this class also manages the process of 'merging' streams together,
  * allowing for incoming data on alternate streams to be collected and considered as one.
  * 
+ * Finally, users can provide a drop rate,
+ * which determines how many packets to drop before we submit one to the queue.
+ * For example, a drop rate of 1 will accept every other packet.
+ * A drop rate of 2 will accept the first received packet and then drop the next two.
+ * A drop rate of 0 will not drop any packets, and is the default.
+ * 
  */
 class DTStream {
 private:
@@ -62,6 +68,12 @@ private:
 
     /// Array of queues for each stream
     std::array<SQueue<json>, STREAMS> queues;
+
+    /// Array of drop rates for each stream
+    std::array<uint16_t, STREAMS> drops;
+
+    /// Drop rate of this queue
+    uint16_t drop_rate = 1;
 
     /**
      * @brief Callback for saving telemetry data
@@ -90,6 +102,20 @@ public:
     DTStream& operator=(const DTStream&) = delete;
 
     DTStream& operator=(DTStream&&) = delete;
+
+    /**
+     * @brief Gets the current drop rate
+     * 
+     * @return uint16_t Current drop rate
+     */
+    uint16_t get_drop_rate() const { return this->drop_rate - 1; }
+
+    /**
+     * @brief Sets the drop rate
+     * 
+     * @param drate New drop rate to set
+     */
+    void set_drop_rate(uint16_t drate) { this->drop_rate = drate + 1; }
 
     /**
      * @brief Sets the connection string
