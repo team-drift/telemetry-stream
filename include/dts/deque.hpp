@@ -15,6 +15,7 @@
 #include <chrono>
 #include <condition_variable>
 #include <mutex>
+#include <deque>
 
 /**
  * @brief A thread safe Deque
@@ -32,7 +33,7 @@ class Deque {
 private:
 
     /// Queue object in use, stores all values
-    std::queue<T> queue;
+    std::deque<T> deque;
 
     /// Mutex to utilize
     std::mutex mutex;
@@ -53,7 +54,7 @@ public:
 
             // We have access! Add the value to the queue:
 
-            this->queue.push(val);
+            this->deque.push_front(val);
         }
 
         // We released the mutex, update the condition variable:
@@ -83,17 +84,17 @@ public:
         // This function also prevents waking too early,
         // the lambda ensures the queue has something in it before we consider the contents
 
-        if (!cond.wait_for(lock, timeout, [this] { return !this->queue.empty(); })) {
+        if (!cond.wait_for(lock, timeout, [this] { return !this->deque.empty(); })) {
             return false;
         }
 
         // We have the mutex! Grab the value from the queue:
 
-        val = std::move(this->queue.front());
+        val = std::move(this->deque.front());
 
         // Delete the value from the queue:
 
-        this->queue.pop();
+        this->deque.pop_front();
 
         return true;
     }
@@ -118,15 +119,15 @@ public:
         // This function also prevents waking too early,
         // the lambda ensures the queue has something in it before we consider the contents
 
-        cond.wait(lock, [this] { return !this->queue.empty(); });
+        cond.wait(lock, [this] { return !this->deque.empty(); });
 
         // We have the mutex! Grab the value from the queue:
 
-        T val = std::move(this->queue.front());
+        T val = std::move(this->deque.front());
 
         // Delete the value from the queue:
 
-        this->queue.pop();
+        this->deque.pop_front();
 
         return std::move(val);
     }
