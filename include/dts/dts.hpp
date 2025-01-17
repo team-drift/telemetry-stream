@@ -24,6 +24,7 @@
 #include <nlohmann/json.hpp>
 
 #include "squeue.hpp"
+#include "deque.hpp"
 
 using json = nlohmann::json;
 
@@ -67,7 +68,7 @@ private:
     std::unique_ptr<mavsdk::Telemetry> telemetry;
 
     /// Array of queues for each stream
-    std::array<SQueue<json>, STREAMS> queues;
+    std::array<Deque<json>, STREAMS> deque;
 
     /// Array of drop rates for each stream
     std::array<uint16_t, STREAMS> drops;

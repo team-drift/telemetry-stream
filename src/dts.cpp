@@ -27,11 +27,11 @@ void DTStream::telem_callback(const json &newData, std::size_t index) {
 
         // Add the JSON data to the queue:
 
-        this->queues[index].push(newData);
+        this->deque[index].push(newData);
     }
 }
 
-std::string DTStream::get_data() {
+std::string DTStream:: get_data() {
 
     // Final JSON data:
 
@@ -39,11 +39,11 @@ std::string DTStream::get_data() {
 
     // We need to get a piece of data from each queue
 
-    for (std::size_t i = 0; i < this->queues.size(); ++i) {
+    for (std::size_t i = 0; i < this->deque.size(); ++i) {
 
         // Get value from this queue:
-
-        final_data.update(this->queues[i].pop());
+        final_data.update(this->deque[i].pop());
+        // final_data.update(this->queues[i].pop());
     }
 
     // Return the final data:
