@@ -53,10 +53,10 @@ class DTStream {
 private:
 
     /// Connection URL to utilize
-    std::string connection_url = "udp://:14540";
+    std::string connection_url = "udpin://:14540";
 
     /// Component type (we hardcode to ground station)
-    mavsdk::Mavsdk::ComponentType component_type = mavsdk::Mavsdk::ComponentType::GroundStation;
+    mavsdk::ComponentType component_type = mavsdk::ComponentType::GroundStation;
 
     /// MAVSDK configuration instance
     mavsdk::Mavsdk::Configuration config;
